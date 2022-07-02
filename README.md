@@ -18,7 +18,8 @@ Stevick, R.J., Pérez-Pascual, D., Ghigo, JM. ....
 # Contents
 
 - LoperamideStraininfo.xlsx - metadata for the strains used in the study
-- figures/ - general figures 
+- figures/ - general figures
+
 
 ## [16SampliconAnalysis](/16SampliconAnalysis)
 This folder contains scripts used to perform QIIME2 analysis on the 16S rRNA amplicon data, the QIIME2 output artifacts, and the R script to reproduce the figures in the manuscript.
@@ -26,15 +27,17 @@ This folder contains scripts used to perform QIIME2 analysis on the 16S rRNA amp
 - [output/](/16SampliconAnalysis/output) - QIIME2 artifacts and processed files
 - [metadata/](/16SampliconAnalysis/metadata)
 
+
 ## [inVitroAnalysis](/inVitroAnalysis)
 This folder contains all the raw data files and the scripts to reproduce the figures and statistics in the manuscript.
-- Growth curves
-- Survival in water
+- [Growth curves](inVitroAnalysis/GrowthCurves)
+- [Survival in water](inVitroAnalysis/WaterSurvival)  
+- Human bacterial strains
 
 
 ## [inVivoAnalysis](/inVivoAnalysis)
 This folder contains all the raw data files and the scripts to reproduce the figures and statistics in the manuscript.
-- Mono-reconv CFUs
-- Mix-reconv CFUs
+- [Mono-reconv CFUs](inVivoAnalysis/Mono)
+- [Mix-reconv CFUs](inVivoAnalysis/MixA)
+- [Fish growth and development](inVivoAnalysis/Growth_Development)
 - Fish survival in Loperamide
-- Fish growth and development
