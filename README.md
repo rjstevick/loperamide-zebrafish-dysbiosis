@@ -12,8 +12,13 @@ Stevick, R.J., Pérez-Pascual, D., Ghigo, JM. ....
 
 -------------------------------------------------------------------------
 
+![schema](figures/LoperamideExperimentalSchematic.png)
+
 
 # Contents
+
+- LoperamideStraininfo.xlsx - metadata for the strains used in the study
+- figures/ - general figures 
 
 ## [16SampliconAnalysis](/16SampliconAnalysis)
 This folder contains scripts used to perform QIIME2 analysis on the 16S rRNA amplicon data, the QIIME2 output artifacts, and the R script to reproduce the figures in the manuscript.

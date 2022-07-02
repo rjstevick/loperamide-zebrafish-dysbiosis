@@ -1,0 +1,1289 @@
+---
+title: "Trial 49 Loperamide CFUs"
+author: "Rebecca Stevick/David Perez Pascual"
+date: "updated 2022.02.23"
+output: 
+   html_document:
+      toc: TRUE
+      theme: "cerulean"
+---
+
+# About the Data
+
+Data from Trial 49, in vivo assay performed from 20220203 - 20220214.
+
+## Timepoints
+
+Treat with loperamide at 5 dpf for 24 hours.
+
+-   Sample timepoint 1 at 6 dpf (24 hour treatment)
+-   Sample timepoint 2 at 7 dpf (24 hour treatment + 24 hour water)
+-   Sample timepoint 3 at 11 dpf (24 hour treatment + 5 days water)
+
+Sampling on 2022.02.09, 02.10, 02.14.
+
+### Sample collection & plating
+
+At each timepoint:
+
+1.  Wash all fish twice by transferring into sterile volvic in a 6-well plate
+2.  Add fish with 500 µL sterile volvic water into a fastprep tube
+3.  Homogenize sample at 6.5 for 45 seconds
+
+**For individual strains (1,2,3,4,10):**\
+Make 0 to -3 dilutions in 96-well plates, in triplicate (8 fish per plate)\
+Plate 10 µL microdrops on big square plates.\
+8 square plates total per timepoint
+
+**For Bc1/Bc2/Bc3/Bc4/Bc10 condition:**\
+Make 3 dilutions in 1.5 mL tubes: 100 µL into 900 µL water --\> 10^0^, 10^-1^, 10^-2^, 10^-3^\
+Spread 3 x 100 µL aliquots of each dilution on LB plates = 12 plates per fish\
+144 plates total per timepoint
+
+Put plates at 28C for 2 days, then count colonies.
+
+### Conditions
+
+|  Treatment (Strain)  | Loperamide Treatment |
+|:--------------------:|:--------------------:|
+|                      |         DMSO         |
+|                      |  Loperamide 10 mg/L  |
+|          Bc1         |                      |
+|          Bc1         |         DMSO         |
+|          Bc1         |  Loperamide 10 mg/L  |
+|          Bc2         |                      |
+|          Bc2         |         DMSO         |
+|          Bc2         |  Loperamide 10 mg/L  |
+|          Bc3         |                      |
+|          Bc3         |         DMSO         |
+|          Bc3         |  Loperamide 10 mg/L  |
+|          Bc4         |                      |
+|          Bc4         |         DMSO         |
+|          Bc4         |  Loperamide 10 mg/L  |
+|         Bc10         |                      |
+|         Bc10         |         DMSO         |
+|         Bc10         |  Loperamide 10 mg/L  |
+| Bc1/Bc2/Bc3/Bc4/Bc10 |                      |
+| Bc1/Bc2/Bc3/Bc4/Bc10 |         DMSO         |
+| Bc1/Bc2/Bc3/Bc4/Bc10 |  Loperamide 10 mg/L  |
+
+# Setup
+
+## Load libraries
+
+```{r setup, warning=FALSE, message=FALSE, echo=FALSE}
+library(tidyverse)
+library(scales)
+library(ggpubr)
+library(ungeviz)
+library(rmdformats)
+library(vegan)
+library(patchwork)
+library(ggtext)
+
+theme_set(theme_minimal()+
+theme(panel.grid.major.y = element_line(color="grey80"), strip.text=element_text(size=16),
+        strip.text.y = element_text(angle=0), plot.caption = element_text(size=10),
+        panel.grid.major.x = element_blank(),legend.position="top",
+        plot.background = element_rect(fill="transparent", color="transparent"),
+        axis.ticks = element_line(inherit.blank = FALSE),
+        panel.background = element_rect(color="grey50", size=2), 
+        legend.title = element_text(size=18),
+        axis.text = element_text(size=15), axis.title = element_text(size=18),
+        legend.text = element_text(size=16), plot.title = element_text(hjust=0.5)))
+
+scientific_10 <- function(x) {ifelse(x==0, "0", parse(text=gsub("[+]", "", gsub("e", " %*% 10^", scientific_format()(x)))))}
+
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE,message=FALSE)
+
+```
+
+## Import data
+
+```{r import, echo=TRUE}
+
+# import individual strain data
+datacfustrial49<-
+   readxl::read_xlsx("Trial49_LoperamideZebrafishWaterCFUs.xlsx", sheet="Fish") %>%
+   drop_na(DF) %>%
+   mutate(LoperamideTreatment=factor(LoperamideTreatment, 
+                                    levels=c("None", "DMSO", "Loperamide 10 mg/L"),
+                                    labels=c("Control","DMSO", "Loperamide")),
+         Treatment = factor(Treatment,
+                            levels=c("Bc1","Bc2","Bc3","Bc4","Bc10","Bc1/Bc2/Bc3/Bc4/Bc10")),
+         Timepoint = case_when(TrialDay == "6" ~ "24 hr treatment",
+                                      TrialDay == "7" ~ "Treatment +\n24 hr recovery",
+                                      TrialDay == "11" ~ "Treatment +\n5 day recovery"),
+         Timepoint_day = case_when(TrialDay == "6" ~ "24hr",
+                                      TrialDay == "7" ~ "48hr",
+                                      TrialDay == "11" ~ "6d")) %>% 
+   mutate(TimepointDay = factor(Timepoint_day, 
+                          levels = c("24hr","48hr","6d"),
+                          labels = c("T0","T1","T5")))
+
+# import mix data
+datacfusmixtrial49 <- 
+   readxl::read_xlsx("Trial49_LoperamideZebrafishWaterCFUs.xlsx", sheet="FishMix") %>%
+   drop_na(DF) %>%
+   mutate(LoperamideTreatment=factor(LoperamideTreatment, 
+                                     levels=c("None", "DMSO", "Loperamide 10 mg/L"),
+                                     labels=c("Control","DMSO", "Loperamide")),
+          Timepoint = case_when(TrialDay == "6" ~ "24 hr treatment",
+                                      TrialDay == "7" ~ "Treatment +\n24 hr recovery",
+                                      TrialDay == "11" ~ "Treatment +\n5 day recovery"),
+         Timepoint_day = case_when(TrialDay == "6" ~ "24hr",
+                                      TrialDay == "7" ~ "48hr",
+                                      TrialDay == "11" ~ "6d")) %>% 
+  group_by(Fish,Treatment,LoperamideTreatment,FishNum,TrialDay, Timepoint_day, Timepoint) %>% 
+  summarise_all(.funs="mean", na.rm=TRUE) %>% 
+   unite("LoperamideTimepoint", LoperamideTreatment,Timepoint_day, remove=FALSE) %>% 
+   unite("FishID", LoperamideTreatment,Timepoint_day,FishNum, remove=FALSE) %>% 
+   mutate(TimepointDay = factor(Timepoint_day, 
+                          levels = c("24hr","48hr","6d"),
+                          labels = c("T0","T1","T5")))
+
+
+# import water data
+watercfustrial49 <- 
+   readxl::read_xlsx("Trial49_LoperamideZebrafishWaterCFUs.xlsx", sheet="Water") %>%
+   filter(Treatment != "Bc1/Bc2/Bc3/Bc4/Bc10") %>%
+   mutate(LoperamideTreatment=factor(LoperamideTreatment, 
+                                    levels=c("None", "DMSO", "Loperamide 10 mg/L"),
+                                    labels=c("Control","DMSO", "Loperamide")),
+         Treatment = factor(Treatment, levels=c("Bc1","Bc2","Bc3","Bc4","Bc10")))
+
+# import strain metadata
+
+
+straininfo <- readxl::read_xlsx("../../LoperamideStrainInfo.xlsx") %>% 
+   mutate(Strain=recode(Strain, "W6t"="W6"))
+
+
+
+```
+
+------------------------------------------------------------------------
+
+# Fish CFUs per individual strain, all timepoints together
+
+## Stats of all significant comparisons
+
+```{r strainstats}
+
+statsbyday <- compare_means(data=datacfustrial49, CFUs_perFish~LoperamideTreatment, 
+                            group.by = c("Treatment","Timepoint","Timepoint_day"))
+gt::gt(statsbyday %>% filter(p.format<0.05 & group1=="DMSO"))
+statsdatastrains <- statsbyday %>% filter(p.format<0.05 & group1=="DMSO") %>% 
+  mutate(CFUs_perFish=2e6, LoperamideTreatment="Loperamide") %>% 
+  mutate(Day=factor(Timepoint_day, 
+                               levels=c("24hr","48hr","6d"),
+                               labels=c("T0","T1","T5")))
+
+```
+
+## First timepoint, total CFUs per Fish
+
+```{r cfustotal, fig.height=5, fig.width=10}
+## Fish CFUs per individual strain
+
+datacfustrial49 %>% filter(TrialDay==6) %>% 
+  ggplot(aes(x = LoperamideTreatment, y=CFUs_perFish, fill=LoperamideTreatment, 
+             color=LoperamideTreatment, shape=LoperamideTreatment))+
+  facet_grid(.~Treatment)+
+  scale_y_continuous(trans = 'log10', #limits=c(1,NA), # expand=c(0,0),
+                     labels = trans_format('log10', math_format(10^.x)))+
+  geom_jitter(width=0.2, height=0, size=3) +
+  stat_summary(geom="hpline", fun="mean", width=0.8) +
+  stat_summary(geom="errorbar", fun.data="mean_sd", width=0.2)+
+  stat_compare_means(comparisons=list(c("DMSO","Loperamide")), 
+                     hide.ns = FALSE, label="p.signif", vjust=0.2)+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_colour_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+  labs(y="CFUs per fish", x=NULL, fill=NULL, color=NULL, shape=NULL,
+       title="Trial 49 Timepoint 1, 24 hours after treatment (n = 4)")
+
+datacfustrial49 %>% filter(TrialDay==6) %>% 
+  ggplot(aes(x = LoperamideTreatment, y=CFUs_perFish, fill=LoperamideTreatment, 
+             color=LoperamideTreatment, shape=LoperamideTreatment))+
+  facet_grid(.~Treatment)+
+  scale_y_continuous(trans = 'log10', #limits=c(1,NA), # expand=c(0,0),
+                     labels = trans_format('log10', math_format(10^.x)))+
+  geom_jitter(width=0.2, height=0, size=3) +
+  stat_summary(geom="hpline", fun="mean", width=0.8) +
+  stat_summary(geom="errorbar", fun.data="mean_sd", width=0.2)+
+  stat_compare_means(comparisons=list(c("DMSO","Loperamide")), 
+                     hide.ns = FALSE, label="p.signif", vjust=0.2)+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_colour_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+  labs(y="CFUs per fish", x=NULL, fill=NULL, color=NULL, shape=NULL,
+       title="Trial 49 Timepoint 1, 24 hours after treatment (n = 4)")
+#ggsave("Trial49_LoperamideCFUs_timepoint1.png", bg="transparent", width = 10, height = 5)
+```
+
+## Faceted by Strain, with means shown. 
+
+Stats are relative to DMSO
+
+```{r alltimepointspanel, fig.height=11, fig.width=7}
+
+datacfustrial49 %>% 
+  ggplot(aes(x = LoperamideTreatment, y=CFUs_perFish, fill=LoperamideTreatment, color=LoperamideTreatment, shape=LoperamideTreatment))+
+  facet_grid(Treatment~Timepoint)+
+  geom_jitter(width=0.2, height=0, size=3) +
+  stat_summary(geom="hpline", fun="mean", width=0.8) +
+  stat_summary(geom="errorbar", fun.data="mean_sd", width=0.2)+
+#  stat_compare_means(ref.group="DMSO", hide.ns = TRUE, label="p.signif", 
+ #                    vjust=0.2, label.y=c(6), size=6, show.legend = FALSE)+
+  geom_text(data=statsdatastrains, aes(label=p.signif), size=8, show.legend=FALSE)+
+  scale_y_continuous(trans = 'log10', limits=c(NA,5e6), # expand=c(0,0),
+                     labels = trans_format('log10', math_format(10^.x)))+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_colour_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+  labs(y="CFUs per fish", x=NULL, fill=NULL, color=NULL, shape=NULL,
+       caption="*p<0.05 for Loperamide treatment, compared to DMSO. Wilcoxcon test")
+#ggsave("Trial49_LoperamideCFUs1.png", bg="transparent", width = 6, height = 11)
+```
+
+## Timeline for each strain with mean
+
+```{r timelineplot, fig.height=5, fig.width=12}
+datacfustrial49 %>% 
+  ggplot(aes(x = Timepoint_day, y=CFUs_perFish, 
+             fill=LoperamideTreatment, color=LoperamideTreatment, shape=LoperamideTreatment))+
+  facet_grid(.~Treatment)+
+  geom_jitter(width=0.2, height=0, size=3) +
+ # stat_summary(aes(group=LoperamideTreatment), geom="line", fun="mean") +
+  stat_summary(geom="hpline", fun="mean", width=0.8, lwd=3.5) +
+  stat_summary(geom="errorbar", fun.data="mean_sd", width=0.2, lwd=1.2)+
+  geom_text(data=statsdatastrains, aes(label=p.signif), size=8, show.legend=FALSE)+
+  scale_y_continuous(trans = 'log10', limits=c(NA,5e6),  labels = trans_format('log10', math_format(10^.x)))+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_colour_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+  labs(y="CFUs per fish", x=NULL, fill=NULL, color=NULL, shape=NULL,
+       subtitle="*p<0.05 for Loperamide treatment, compared to DMSO. Wilcoxcon test")
+#ggsave("Trial49_LoperamideCFUs2.png", bg="transparent", width = 10, height = 6)
+```
+
+## Timeline for each strain with boxplots
+
+```{r boxplot, fig.height=5, fig.width=14}
+datacfustrial49 %>% 
+   mutate(Day=factor(Timepoint_day, 
+                               levels=c("24hr","48hr","6d"),
+                               labels=c("T0","T1","T5"))) %>% 
+   ggplot(aes(x = Day, y=CFUs_perFish, 
+             fill=LoperamideTreatment, color=LoperamideTreatment, shape=LoperamideTreatment))+
+  facet_grid(.~Treatment)+
+  geom_boxplot(color="black", alpha=0.8)+
+  geom_point(size=2, position=position_jitterdodge(jitter.width=0.3)) +
+  scale_y_continuous(trans = 'log10', limits=c(NA,5e6), 
+                     labels = trans_format('log10', math_format(10^.x)))+
+  geom_text(data=statsdatastrains, aes(label=p.signif), size=8, 
+            show.legend=FALSE, nudge_x = 0.33)+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_colour_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+  labs(y="CFUs per fish (log scale)", x=NULL, fill=NULL, color=NULL, shape=NULL)
+ggsave("Trial49_LoperamideCFUs3.png", bg="transparent", width = 12, height = 5)
+
+```
+
+
+```{r boxplotpresent, fig.height=5, fig.width=14}
+datacfustrial49 %>% 
+  ggplot(aes(x = Timepoint_day, y=CFUs_perFish, 
+             fill=LoperamideTreatment, color=LoperamideTreatment, shape=LoperamideTreatment))+
+  facet_grid(.~Treatment)+
+  geom_boxplot(color="black", alpha=0.8)+
+  geom_point(size=2, position=position_jitterdodge(jitter.width=0.3)) +
+  scale_y_continuous(trans = 'log10', limits=c(NA,5e6), 
+                     labels = trans_format('log10', math_format(10^.x)))+
+  geom_text(data=statsdatastrains, aes(label=p.signif), size=8, 
+            show.legend=FALSE, nudge_x = 0.33)+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_colour_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+  labs(y="CFUs per fish", x=NULL, fill=NULL, color=NULL, shape=NULL)+
+   theme(text=element_text(family="Avenir"), legend.position = "bottom", 
+         panel.background = element_rect(size=1))
+ggsave("Trial49_LoperamideCFUs3avenir.png", bg="transparent", width = 12, height = 5)
+```
+
+------------------------------------------------------------------------
+
+# Mix community CFUs
+
+## Overall Mix CFUs per condition
+
+```{r mixbox, fig.height=4, fig.width=8}
+
+datacfusmixtrial49 %>% 
+   ggplot(aes(x=LoperamideTreatment, y=CFUs_perFish, fill=LoperamideTreatment))+
+   geom_point(size=3, shape=21, position=position_dodge(width=0.5), show.legend = FALSE)+
+   facet_grid(.~TimepointDay)+
+   geom_boxplot(alpha=0.6, width=0.5, show.legend = FALSE)+
+    stat_compare_means(comparisons=list(c("Control","DMSO"),c("DMSO","Loperamide"),
+                                        c("Control","Loperamide")), label="p.signif", method="t.test")+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_y_continuous(trans = 'log10', limits=c(1,5e6), 
+                      labels = trans_format('log10', math_format(10^.x)))+
+  theme_pubr()+theme(strip.background = element_rect(color="transparent"))+
+  labs(y="CFUs per fish", x=NULL, subtitle = "Bc1/Bc2/Bc3/Bc4/Bc10 total CFUs")
+```
+
+```{r mix, fig.height=4, fig.width=8}
+datacfusmixtrial49 %>% 
+  ggplot(aes(x=TimepointDay, y=CFUs_perFish, color=LoperamideTreatment))+
+  facet_grid(.~LoperamideTreatment)+
+  geom_jitter(width=0.2, height=0, size=3, alpha=0.6) +
+  stat_summary(aes(group=LoperamideTreatment),geom="line", fun="mean") +
+  stat_summary(geom="hpline", fun="mean", width=0.8) +
+  stat_summary(geom="errorbar", fun.data="mean_sd", width=0.2)+
+  stat_compare_means(comparisons=list(c("24 hr treatment","Treatment +\n5 day recovery")), 
+                     label="p.signif", method="t.test")+
+   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+  scale_y_continuous(trans = 'log10', limits=c(1,5e5), 
+                     labels = trans_format('log10', math_format(10^.x)))+
+  theme(legend.position = "none")+
+  labs(y="CFUs per fish", x=NULL, subtitle = "Bc1/Bc2/Bc3/Bc4/Bc10 total CFUs")
+
+```
+
+
+```{r mixtotalcfus, fig.height=4, fig.width=8}
+datacfusmixtrial49 %>% 
+  ggplot(aes(x=TimepointDay, y=CFUs_perFish, color=LoperamideTreatment, shape=LoperamideTreatment))+
+   stat_summary(geom="hpline", fun="mean", width=0.25, position=position_dodge(width=0.8)) +
+   stat_summary(geom="errorbar", fun.data="mean_sd", width=0.2, position=position_dodge(width=0.8))+
+   geom_point(size=2, position=position_jitterdodge(jitter.width=0.3), alpha=0.5) +
+   scale_y_continuous(trans = 'log10', limits=c(1e2,1e6), breaks=c(1e2, 1e4, 1e6),
+                     labels = trans_format('log10', math_format(10^.x)))+
+   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+  theme(legend.position = "none")+
+  labs(y="Total CFUs per fish", x="Timepoint", color=NULL, shape=NULL)+
+   theme(panel.grid.major.y = element_line(color="grey80"),
+         panel.background = element_blank(),
+         legend.text = element_text(size=16),
+         legend.position="right", legend.direction="vertical")
+
+
+ggsave("Trial49_LoperamideMixTotalCFUsPoster.png", bg="transparent", width = 6, height = 3)
+
+
+
+mixtotalCFUplot <- datacfusmixtrial49 %>% 
+  ggplot(aes(x=TimepointDay, y=CFUs_perFish, 
+             fill=LoperamideTreatment, color=LoperamideTreatment, shape=LoperamideTreatment))+
+  geom_boxplot(color="black", alpha=0.8, show.legend = FALSE)+
+  geom_point(size=2, position=position_jitterdodge(jitter.width=0.3)) +
+   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+  scale_y_continuous(trans = 'log10', limits=c(5e2,5e5), 
+                     labels = trans_format('log10', math_format(10^.x)))+
+  theme(legend.position = "none")+
+  labs(y="Total CFUs per fish", x=NULL, fill=NULL, color=NULL, shape=NULL)+
+   theme(legend.position = "right",legend.direction = "vertical", 
+         panel.background = element_rect(size=1),
+         legend.text = element_markdown(size=22))+
+   guides(color=guide_legend(override.aes = list(size=4)))
+mixtotalCFUplot
+
+```
+
+```{r mixtrendpresent, fig.height=4, fig.width=8}
+
+
+datacfusmixtrial49 %>% 
+  ggplot(aes(x=Timepoint_day, y=CFUs_perFish, 
+             fill=LoperamideTreatment, color=LoperamideTreatment, shape=LoperamideTreatment))+
+  geom_boxplot(color="black", alpha=0.8)+
+  geom_point(size=2, position=position_jitterdodge(jitter.width=0.3)) +
+   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+  scale_y_continuous(trans = 'log10', limits=c(5e2,5e5), 
+                     labels = trans_format('log10', math_format(10^.x)))+
+  theme(legend.position = "none")+
+  labs(y="Total CFUs per fish", x=NULL, color=NULL)+
+   theme(text=element_text(family="Avenir"), legend.position = "none", 
+         panel.background = element_rect(size=1))
+
+
+ggsave("Trial49_LoperamideMixTotalCFUsavenir.png", bg="transparent", width = 8, height = 5)
+
+```
+
+## Total mix CFUs per fish
+
+```{r cfustotalbar, warning=FALSE, fig.height=4, fig.width=12}
+
+totalcfus <-
+   datacfusmixtrial49 %>%
+   ggplot(aes(x=as.factor(FishNum), y=CFUs_perFish, fill=LoperamideTreatment))+
+   geom_col(show.legend = FALSE)+
+   facet_grid(.~Timepoint_day+LoperamideTreatment, space="free", scales="free")+
+   scale_y_continuous(trans = 'log10', labels = trans_format('log10', math_format(10^.x)))+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   theme(legend.position = "none", strip.text = element_text(size=12))+
+   labs(x=NULL, y="CFUs per fish (log scale)")
+totalcfus
+
+```
+
+## Percent abundance of each strain per fish
+
+```{r straintotal}, warning=FALSE, fig.width=15}
+percentstrain <- 
+    datacfusmixtrial49 %>% 
+   pivot_longer(Bc1perFish:Bc10perFish) %>% 
+   mutate(name=factor(name,
+                      levels=c("Bc1perFish","Bc2perFish","Bc3perFish","Bc4perFish","Bc10perFish"),
+                      labels=c("Bc1","Bc2","Bc3","Bc4","Bc10"))) %>% 
+   ggplot(aes(x=as.factor(FishNum), y=value, fill=name))+
+   geom_col(position="fill")+
+   facet_grid(.~Timepoint_day+LoperamideTreatment, space="free", scales="free")+
+   scale_y_continuous(labels=scales::label_percent(sale=1))+
+   scale_fill_manual(values = nationalparkcolors::park_palette("Saguaro", 5))+
+   labs(x=NULL, y="CFUs per strain \n(% of total CFUs per fish)", fill="Strain")
+percentstrain
+
+
+```
+
+
+```{r strainpercent}
+
+library(ggh4x)
+
+percentplot <- datacfusmixtrial49 %>% 
+   pivot_longer(Bc1perFish:Bc10perFish) %>% 
+   mutate(name=factor(name,
+                      levels=c("Bc2perFish","Bc10perFish","Bc3perFish","Bc4perFish","Bc1perFish"),
+                      labels=c("S1. *Pseudomonas mossellii*",
+                               "S3. *Pseudomonas nitroreducens*",
+                               "S5. *Stenotrophomonas maltophila*",
+                               "S6. *Aeromonas caviae*",
+                               "S7. *Aeromonas veronii*"))) %>% 
+   ggplot(aes(x=as.factor(FishNum), y=value, fill=name))+
+   geom_col(position="fill")+
+   facet_nested(.~TimepointDay+LoperamideTreatment, space="free", scales="free")+
+   scale_y_continuous(labels=scales::label_percent(sale=1))+
+   scale_fill_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
+   labs(x=NULL, y="CFUs per strain \n(% of total CFUs per fish)", fill=NULL)+
+   theme(strip.text=element_text(size=15), axis.text.x = element_blank(),
+         axis.ticks.x = element_blank(),
+         strip.background = element_rect(fill="grey85", color="white"),
+         legend.position = "bottom", legend.direction = "vertical",
+         panel.background = element_blank(),
+         legend.text = element_markdown(size=22))
+
+
+library(cowplot)
+percentlegend <- get_legend(percentplot)
+cfulegend <- get_legend(mixtotalCFUplot)
+
+legends <- plot_grid(cfulegend, percentlegend, ncol=1, axis = "l")
+
+((mixtotalCFUplot+legends + plot_layout(widths=c(2,4)))  /
+      percentplot ) +plot_annotation(tag_levels = list(c('A','','B')))  &
+   theme(legend.position="none", plot.tag = element_text(face = "bold", size=20))
+
+ggsave("../Trial47_MixReconvPlot.png", width=14.5, height=8)
+
+```
+
+
+
+```{r straintotalposter}, warning=FALSE, fig.width=8}
+
+datacfusmixtrial49 %>% 
+   pivot_longer(Bc1perFish:Bc10perFish) %>% 
+   mutate(name=factor(name,
+                      levels=c("Bc2perFish","Bc10perFish","Bc3perFish","Bc4perFish","Bc1perFish"),
+                      labels=c("1. Pseudomonas mossellii",
+                               "3. Pseudomonas nitroreducens",
+                               "5. Stenotrophomonas maltophila",
+                               "6. Aeromonas caviae",
+                               "7. Aeromonas veronii"))) %>% 
+   ggplot(aes(x=as.factor(FishNum), y=value, fill=name))+
+   geom_col(position="fill")+
+   facet_grid(.~TimepointDay+LoperamideTreatment, space="free", scales="free")+
+   scale_y_continuous(labels=scales::label_percent(sale=1))+
+   scale_fill_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
+   labs(x=NULL, y="CFUs per strain \n(% of total CFUs per fish)", fill=NULL)+
+   theme(text=element_text(size=18), axis.text.x = element_blank(),
+         axis.ticks.x = element_blank(),
+         legend.position = "bottom", legend.direction = "vertical",
+         panel.background = element_blank(),
+         legend.text = element_text(size=22))
+
+
+datacfusmixtrial49 %>% 
+   pivot_longer(Bc1perFish:Bc10perFish) %>% filter(LoperamideTreatment!="Control") %>% 
+   mutate(name=factor(name,
+                      levels=c("Bc2perFish","Bc10perFish","Bc3perFish","Bc4perFish","Bc1perFish"),
+                      labels=c("S1. *Pseudomonas mossellii*",
+                               "S3. *Pseudomonas nitroreducens*",
+                               "S5. *Stenotrophomonas maltophila*",
+                               "S6. *Aeromonas caviae*",
+                               "S7. *Aeromonas veronii*"))) %>% 
+   group_by(FishID) %>% mutate(percent = value/sum(value)) %>% 
+   ggplot(aes(x=FishID, y=fct_rev(name), fill=percent))+
+   facet_grid(.~TimepointDay+LoperamideTreatment, scales="free", space="free")+
+   geom_tile()+
+   theme(legend.text = element_text(size=13, colour="gray20"), strip.background = element_blank(),
+         axis.text.x = element_blank(), legend.position="bottom",
+         strip.text = element_text(size=13, colour="gray20"),
+         axis.text.y = element_markdown(size=17, colour="gray20"),
+         legend.title = element_text(size=15, colour="gray20"),
+         panel.grid.major.x = element_blank(),panel.grid.minor.x = element_blank(),
+         panel.grid.major.y = element_blank(),panel.grid.minor.y = element_blank(),
+         axis.ticks.x = element_blank(), legend.key.width = unit(1,"cm"))+
+   scale_fill_gradientn(na.value = "salmon",labels = scales::percent,
+                       colors=c("white","dodgerblue2","navy","black")) +
+   labs(fill="Percent genus abundance",x=NULL,y=NULL)
+
+ggsave("Trial49_LoperamideMixCFUsPercentposter.svg", bg="transparent", width = 10, height = 4)
+
+```
+
+
+
+```{r straintotalpresent}, warning=FALSE, fig.width=15}
+
+datacfusmixtrial49 %>% 
+   pivot_longer(Bc1perFish:Bc10perFish) %>% 
+   mutate(name=factor(name,
+                      levels=c("Bc1perFish","Bc2perFish","Bc3perFish","Bc4perFish","Bc10perFish"),
+                      labels=c("Bc1. Aeromonas veronii",
+                               "Bc2. Pseudomonas mossellii",
+                               "Bc3. Stenotrophomonas maltophila",
+                               "Bc4. Aeromonas caviae",
+                               "Bc10. Pseudomonas nitroreducens"))) %>% 
+   ggplot(aes(x=as.factor(FishNum), y=value, fill=name))+
+   geom_col(position="fill")+
+   facet_grid(.~Timepoint_day+LoperamideTreatment, space="free", scales="free")+
+   scale_y_continuous(labels=scales::label_percent(sale=1))+
+   scale_fill_manual(values = nationalparkcolors::park_palette("Saguaro", 5))+
+   labs(x=NULL, y="CFUs per strain \n(% of total CFUs per fish)", fill=NULL)+
+   theme(text=element_text(family="Avenir", size=18), axis.text.x = element_blank(),
+         axis.ticks.x = element_blank(),
+         legend.position = "bottom", legend.direction = "vertical",
+         panel.background = element_blank(),
+         legend.text = element_text(size=22))
+
+ggsave("Trial49_LoperamideMixCFUs3Percentavenir.png", bg="transparent", width = 15, height = 9)
+
+```
+
+## CFUs of each strain per fish, log scale
+
+```{r straineachlog, warning=FALSE, fig.width=12, fig.height=9}
+datacfusmixtrial49 %>% 
+   pivot_longer(Bc1perFish:CFUs_perFish) %>% 
+   mutate(name=factor(name,
+                      levels=c("Bc1perFish","Bc2perFish","Bc3perFish","Bc4perFish","Bc10perFish","CFUs_perFish"),
+                      labels=c("Bc1","Bc2","Bc3","Bc4","Bc10","Total"))) %>% 
+   ggplot(aes(x=as.factor(FishNum), y=value, fill=name))+
+   geom_col(position="identity")+
+   facet_grid(name~LoperamideTreatment+Timepoint, scales="free_x")+
+   scale_fill_manual(values = c(nationalparkcolors::park_palette("Saguaro", 5), "grey40"))+
+   scale_y_continuous(trans = 'log10', expand=c(0,0),
+                      labels = trans_format('log10', math_format(10^.x)))+
+   theme(legend.position = "none", strip.text = element_text(size=12))+
+   labs(x="Fish Number", y="CFUs per strain per fish (log scale)", fill=NULL)
+```
+
+```{r straineachloggroup, warning=FALSE, fig.width=8, fig.height=12}
+datacfusmixtrial49 %>% 
+   pivot_longer(Bc1perFish:CFUs_perFish) %>% 
+   mutate(name=factor(name,
+                      levels=c("Bc1perFish","Bc2perFish","Bc3perFish","Bc4perFish","Bc10perFish","CFUs_perFish"),
+                      labels=c("Bc1","Bc2","Bc3","Bc4","Bc10","Total"))) %>% 
+   ggplot(aes(x=Timepoint_day, y=value, fill=LoperamideTreatment))+
+   stat_summary(geom="col", fun="mean")+
+   stat_summary(geom="errorbar", fun.data="mean_sd", width=0.2)+
+   facet_grid(name~LoperamideTreatment, scales="free_x")+
+   scale_fill_manual(values=c("#000000","#004488","#44BB99"))+
+   scale_y_continuous(trans = 'log10', expand=c(0,0),
+                      labels = trans_format('log10', math_format(10^.x)))+
+   theme(legend.position = "none", strip.text = element_text(size=12))+
+   labs(x="Treatment", y="CFUs per strain per fish (log scale)", fill=NULL)
+```
+
+## CFUs by strain
+
+### Grouped by Timepoint
+
+```{r strainslog, fig.width=20, fig.height=4}
+datacfusmixtrial49 %>% 
+     pivot_longer(Bc1perFish:CFUs_perFish) %>% 
+   mutate(name=factor(name,
+                      levels=c("Bc1perFish","Bc2perFish","Bc3perFish","Bc4perFish","Bc10perFish","CFUs_perFish"),
+                      labels=c("Bc1","Bc2","Bc3","Bc4","Bc10","Total"))) %>% 
+   ggplot(aes(x=LoperamideTreatment, y=value, fill=LoperamideTreatment))+
+   stat_summary(geom="col", fun="mean")+
+   stat_summary(geom="errorbar", fun.data="mean_sd", width=0.2)+
+   stat_compare_means(comparisons=list(c("Control","DMSO"),c("DMSO","Loperamide"),
+                                       c("Control","Loperamide")), label="p.signif")+
+   facet_grid(.~name+Timepoint, scales="free_x")+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_y_continuous(trans = 'log10', expand=c(0,0),limits=c(NA,3e7),
+                      labels = trans_format('log10', math_format(10^.x)))+
+   theme(legend.position = "none", strip.text = element_text(size=12))+
+   labs(x="Treatment", y="CFUs per fish (log scale)", fill=NULL)
+```
+
+### Grouped by Treament
+
+```{r strainslog2, fig.width=20, fig.height=4}
+datacfusmixtrial49 %>% 
+     pivot_longer(Bc1perFish:CFUs_perFish) %>% 
+   mutate(name=factor(name,
+                      levels=c("Bc1perFish","Bc2perFish","Bc3perFish","Bc4perFish","Bc10perFish","CFUs_perFish"),
+                      labels=c("Bc1","Bc2","Bc3","Bc4","Bc10","Total"))) %>% 
+   ggplot(aes(x=Timepoint_day, y=value, fill=LoperamideTreatment))+
+   stat_summary(geom="col", fun="mean")+
+   stat_summary(geom="errorbar", fun.data="mean_sd", width=0.2)+
+   stat_compare_means(comparisons=list(c("24hr","48hr")), label="p.signif")+
+   facet_grid(.~name+LoperamideTreatment, scales="free_x")+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_y_continuous(trans = 'log10', expand=c(0,0),limits=c(NA,3e7),
+                      labels = trans_format('log10', math_format(10^.x)))+
+   theme(legend.position = "none", strip.text = element_text(size=12))+
+   labs(x="Timepoint", y="CFUs per fish (log scale)", fill=NULL)
+
+```
+## CFUs of Bc1 in mix
+
+```{r strainbc1log, warning=FALSE, fig.width=8, fig.height=5}
+datacfusmixtrial49 %>% 
+   ggplot(aes(x=Timepoint_day, y=Bc1perFish, fill=LoperamideTreatment, group=LoperamideTreatment))+
+   stat_summary(geom="col", fun="mean")+
+   stat_summary(geom="errorbar", fun.data="mean_sd", width=0.2)+
+   facet_grid(.~LoperamideTreatment, scales="free_x")+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_y_continuous(trans = 'log10', expand=c(0,0),limits=c(NA,1e7),
+                      labels = trans_format('log10', math_format(10^.x)))+
+   stat_compare_means(comparisons=list(c("24hr","48hr"),c("24hr","6d")), label="p.format")+
+   theme(legend.position = "none")+
+   labs(x="Treatment", y="CFUs per fish (log scale)", fill=NULL, subtitle="Bc1 CFUs in mix")
+
+
+```
+
+## CFUs of Bc3 in mix
+
+```{r strainbc3log, warning=FALSE, fig.width=8, fig.height=5}
+datacfusmixtrial49 %>% 
+   ggplot(aes(x=LoperamideTreatment, y=Bc3perFish, fill=LoperamideTreatment))+
+   stat_summary(geom="col", fun="mean")+
+   stat_summary(geom="errorbar", fun.data="mean_sd", width=0.2)+
+   facet_grid(.~Timepoint, scales="free_x")+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_y_continuous(trans = 'log10', expand=c(0,0),limits=c(NA,5e4),
+                      labels = trans_format('log10', math_format(10^.x)))+
+   stat_compare_means(comparisons=list(c("Control","DMSO"),c("DMSO","Loperamide"),
+                                       c("Control","Loperamide")), label="p.signif")+
+   theme(legend.position = "none")+
+   labs(x="Treatment", y="CFUs per fish (log scale)", fill=NULL, subtitle="Bc3 CFUs in mix")
+
+```
+
+## Mix Summary Figure
+
+```{r summary, warning=FALSE, fig.width=14, fig.height=7}
+library(patchwork)
+(totalcfus + theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())) /
+   percentstrain + theme(strip.text = element_blank(), legend.position = "right")
+```
+
+## Alpha diversity
+
+```{r alphasimp, fig.width=6, fig.height=3}
+
+matrixcfusmix49<- datacfusmixtrial49 %>% ungroup() %>% 
+   unite("FishID", LoperamideTreatment,Timepoint_day,FishNum) %>% 
+   select(FishID, Bc1perFish:Bc10perFish) %>% 
+   column_to_rownames(var="FishID") %>% as.matrix()
+
+datacfusmixtrial49$Simpsons<-diversity(matrixcfusmix49, index="simpson")
+
+datacfusmixtrial49 %>% 
+   ggplot(aes(x=LoperamideTreatment,y=Simpsons, fill=LoperamideTreatment, shape=LoperamideTreatment))+
+   geom_jitter(width=0.15, size=3, alpha=0.8)+
+   geom_boxplot(alpha=0.8)+
+   facet_wrap(~TimepointDay, scales="free")+
+   stat_compare_means(ref.group="DMSO", label = "p.format", vjust=-0.5, size=2.5)+
+   labs(caption="(n=3-4). Wilcoxon Test, relative to DMSO condition", x=NULL,
+        y="Simpson's Index of Diversity",fill="LoperamideTimepoint",
+        title="Alpha-diversity in CFUs from mix of 5 strains")+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_shape_manual(values=c(21,22,23))+
+   scale_y_continuous(limits=c(NA,1))+
+   theme_bw()+
+   theme(legend.position = "none", strip.background = element_blank(), strip.text=element_text(size=16))
+
+
+
+
+
+```
+
+```{r alphapresent}
+
+
+statsSimpsonsMix <-  compare_means(data=datacfusmixtrial49, 
+                            Simpsons~LoperamideTreatment, 
+                            group.by = c("TimepointDay")) %>% 
+   filter(p.format<0.05 & group1=="DMSO")
+
+
+mixalpha<- 
+   datacfusmixtrial49 %>% 
+   ggplot(aes(x=LoperamideTreatment,y=Simpsons,shape=LoperamideTreatment, fill=LoperamideTreatment)) +
+   geom_boxplot(aes(), alpha=0.8)+
+   geom_jitter(aes(), width=0.1, size=3, alpha=0.8)+
+   geom_hline(yintercept=0)+
+   geom_text(data=statsSimpsonsMix, aes(label="*", x=group2, y=0.9, fill=NA, shape=NA), size=9, color="#0fc08e",
+            show.legend=FALSE)+
+   facet_grid(~TimepointDay, scales="free_x")+
+   labs( x=NULL, y="Simpson's Index of Diversity\nMix gnotobiotic fish",fill=NULL, shape=NULL)+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e')) +
+   scale_shape_manual(values=c(21,24,22))+
+   scale_y_continuous(limits=c(0,1.0), expand=c(0,0))+
+   theme(text=element_text(size=16), 
+       #  axis.ticks.x = element_blank(),axis.text.x = element_blank(),
+         strip.text=element_text(size=20),
+         legend.position = "none", strip.background = element_blank(),
+         panel.background = element_rect(color="grey80", size=0.8),
+         legend.text = element_text(size=16))
+mixalpha   
+ggsave("LoperamideAlphaDivMixReconv.png", width=12, height=4, dpi=400)
+
+
+
+#mixalpha/plot_spacer()/convalpha+plot_layout(heights=c(6,1,6))
+#ggsave("Trial49_LoperamideMixCFUsDiversity_compare16S_avenir.png", bg="transparent", width = 12, height = 6)
+
+
+
+```
+
+
+
+```{r altalpha}
+
+mixalpha2 <- datacfusmixtrial49 %>% 
+   ggplot(aes(x=TimepointDay, y=Simpsons, 
+             fill=LoperamideTreatment, color=LoperamideTreatment, shape=LoperamideTreatment))+
+   geom_boxplot(color="black", alpha=0.8, show.legend = FALSE)+
+   geom_point(size=2, position=position_jitterdodge(jitter.width=0.3)) +
+   geom_text(data=statsSimpsonsMix, aes(label="*", x=TimepointDay, 
+                                        y=0.9, fill=NA, shape=NA), 
+             size=9, color="#0fc08e", show.legend=FALSE, nudge_x=.25)+
+   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_y_continuous(limits=c(0,1.0), expand=c(0,0))+
+   theme(legend.position = "none")+
+   labs(x=NULL, y="Simpson's Index of Diversity",fill=NULL, shape=NULL, color=NULL,
+        title="Mix gnotobiotic fish")+
+   theme(legend.position = "bottom", plot.title = element_text(size=20),
+         panel.background = element_rect(color="grey80", size=0.8))+
+   guides(color=guide_legend(override.aes = list(size=4)))
+mixalpha2
+
+convalpha2 + mixalpha2 + labs(y=NULL) + 
+   plot_layout(guides="collect")+plot_annotation(tag_levels = "A") & 
+   theme(legend.position="bottom",plot.tag = element_text(face = "bold", size=20))
+ggsave("../AlphaDiversity_conv_mix5.png", bg="transparent", width = 8, height = 5)
+
+
+```
+
+## Beta diversity
+
+
+```{r betadivsetup}
+# ellipse function
+veganCovEllipse<-function (cov, center = c(0, 0), scale = 1, npoints = 100)
+{
+   theta <- (0:npoints) * 2 * pi/npoints
+   Circle <- cbind(cos(theta), sin(theta))
+   t(center + scale * t(Circle %*% chol(cov)))
+}
+```
+
+### All samples together
+
+```{r loperamidebeta, fig.show='hide', results=FALSE, echo=FALSE}
+
+matrixcfusmix<- datacfusmixtrial49 %>% ungroup() %>% 
+   unite("FishID", LoperamideTreatment,Timepoint_day,FishNum) %>% 
+   select(FishID, Bc1perFish:Bc10perFish) %>% 
+   column_to_rownames(var="FishID") %>% as.matrix()
+
+sol<-metaMDS(matrixcfusmix,distance = "bray", k = 2, trymax = 200)
+sol$stress; stressplot(sol)
+
+NMDS=data.frame(x=sol$point[,1],y=sol$point[,2],
+                LoperamideTreatment=as.factor(datacfusmixtrial49$LoperamideTreatment),
+                TimepointDay=as.factor(datacfusmixtrial49$Timepoint_day),
+                Rep=as.factor(datacfusmixtrial49$FishNum),
+                LoperamideTimepoint=as.factor(datacfusmixtrial49$LoperamideTimepoint))
+
+plot.new()
+ord<-ordiellipse(sol, NMDS$LoperamideTimepoint, display = "sites", kind ="sd", conf = 0.95, label = T)
+dev.off()
+df_ell <- data.frame()
+for(g in levels(NMDS$LoperamideTimepoint)){
+  if(g!="" && (g %in% names(ord))){
+    df_ell <- rbind(df_ell, cbind(as.data.frame(with(NMDS[NMDS$LoperamideTimepoint==g,],                                                     veganCovEllipse(ord[[g]]$cov,ord[[g]]$center,ord[[g]]$scale))),LoperamideTimepoint=g))}}
+head(df_ell)
+```
+
+```{r betaplot, fig.width=8}
+NMDS.mean=aggregate(NMDS[,1:2],list(group=NMDS$LoperamideTimepoint),mean)
+ggplot(data=NMDS,aes(x,y,colour=LoperamideTimepoint,fill=LoperamideTimepoint))+theme_bw() +
+  geom_path(data=df_ell, aes(x=NMDS1, y=NMDS2, lty=LoperamideTimepoint), size=1) +
+  geom_point(size=4, alpha=0.9,aes(shape=TimepointDay))+scale_shape_manual(values = c(21,22,23,24,25))+
+  annotate("text",x=NMDS.mean$x,y=NMDS.mean$y,label=NMDS.mean$group,size=5, color="gray40") +
+ scale_color_manual(values=c("grey80","grey50","grey20","#a7a7ff","#0000ce", 
+                             "#00006c","aquamarine1", "aquamarine3","aquamarine4")) +
+  scale_fill_manual(values=c("grey80","grey50","grey20","#a7a7ff","#0000ce", 
+                             "#00006c","aquamarine1", "aquamarine3","aquamarine4")) +
+  scale_linetype_manual(values=c("solid","solid","solid","dotted","dotted","dotted","dashed","dashed","dashed"))+
+  theme(legend.text = element_text(size=14, colour="gray20"), legend.position = "right",
+        legend.title = element_blank(),legend.box="horizontal")
+
+```
+
+### Just DMSO and loperamide
+
+```{r loperamidedmsobeta, fig.show='hide', results=FALSE, echo=FALSE}
+
+matrixcfusmix<- datacfusmixtrial49 %>% ungroup() %>% filter(LoperamideTreatment!="Control") %>% 
+   unite("FishID", LoperamideTreatment,Timepoint_day,FishNum) %>% 
+   select(FishID, Bc1perFish:Bc10perFish) %>% 
+   column_to_rownames(var="FishID") %>% as.matrix()
+datacfusmixtrial49nowater <- datacfusmixtrial49 %>% filter(LoperamideTreatment!="Control") 
+
+sol<-metaMDS(matrixcfusmix,distance = "bray", k = 2, trymax = 200)
+sol$stress; stressplot(sol)
+
+NMDS=data.frame(x=sol$point[,1],y=sol$point[,2],
+                LoperamideTreatment=as.factor(datacfusmixtrial49nowater$LoperamideTreatment),
+                TimepointDay=as.factor(datacfusmixtrial49nowater$Timepoint_day),
+                Rep=as.factor(datacfusmixtrial49nowater$FishNum),
+                LoperamideTimepoint=as.factor(datacfusmixtrial49nowater$LoperamideTimepoint))
+
+plot.new()
+ord<-ordiellipse(sol, NMDS$LoperamideTimepoint, display = "sites", kind ="sd", conf = 0.95, label = T)
+dev.off()
+df_ell <- data.frame()
+for(g in levels(NMDS$LoperamideTimepoint)){
+  if(g!="" && (g %in% names(ord))){
+    df_ell <- rbind(df_ell, cbind(as.data.frame(with(NMDS[NMDS$LoperamideTimepoint==g,],
+                                  veganCovEllipse(ord[[g]]$cov,ord[[g]]$center,ord[[g]]$scale))),LoperamideTimepoint=g))}}
+head(df_ell)
+```
+
+```{r betaplotnowater, fig.width=8}
+NMDS.mean=aggregate(NMDS[,1:2],list(group=NMDS$LoperamideTimepoint),mean)
+ggplot(data=NMDS,aes(x,y,colour=LoperamideTimepoint,fill=LoperamideTimepoint))+theme_bw() +
+  geom_path(data=df_ell, aes(x=NMDS1, y=NMDS2, lty=LoperamideTimepoint), size=1) +
+  geom_point(size=4, alpha=0.9,aes(shape=TimepointDay))+scale_shape_manual(values = c(21,22,23,24,25))+
+  annotate("text",x=NMDS.mean$x,y=NMDS.mean$y,label=NMDS.mean$group,size=5, color="gray40") +
+ scale_color_manual(values=c("#a7a7ff","#0000ce", "#00006c","aquamarine1", "aquamarine3","aquamarine4")) +
+  scale_fill_manual(values=c("#a7a7ff","#0000ce", "#00006c","aquamarine1", "aquamarine3","aquamarine4")) +
+   scale_linetype_manual(values=c("solid","dotted","dashed","solid","dotted","dashed"))+
+   theme(legend.text = element_text(size=14, colour="gray20"), legend.position = "right",
+        legend.title = element_blank(),legend.box="horizontal")
+```
+
+### Each timepoint separately
+
+
+```{r loperamidebetasep, fig.show='hide', results=FALSE, echo=FALSE}
+
+matrixcfusmix1<-  datacfusmixtrial49 %>% ungroup()%>% filter(TrialDay==6)  %>%
+   unite("FishID", LoperamideTreatment,Timepoint_day,FishNum) %>% 
+   select(FishID, Bc1perFish:Bc10perFish) %>% 
+   column_to_rownames(var="FishID") %>% as.matrix() 
+datacfusmix1 <- datacfusmixtrial49 %>% filter(TrialDay==6)
+sol1<-metaMDS(matrixcfusmix1,distance = "bray", k = 2, trymax = 200)
+sol1$stress; stressplot(sol1)
+
+NMDS=data.frame(x=sol1$point[,1],y=sol1$point[,2],
+                LoperamideTreatment=as.factor(datacfusmix1$LoperamideTreatment),
+                TimepointDay=as.factor(datacfusmix1$Timepoint_day),
+                Rep=as.factor(datacfusmix1$FishNum),
+                LoperamideTimepoint=as.factor(datacfusmix1$LoperamideTimepoint))
+
+plot.new()
+ord<-ordiellipse(sol1, NMDS$LoperamideTreatment, display = "sites", kind ="sd", conf = 0.95, label = T)
+dev.off()
+df_ell <- data.frame()
+for(g in levels(NMDS$LoperamideTreatment)){
+  if(g!="" && (g %in% names(ord))){
+    df_ell <- rbind(df_ell, cbind(as.data.frame(with(NMDS[NMDS$LoperamideTreatment==g,],
+                                                     veganCovEllipse(ord[[g]]$cov,ord[[g]]$center,ord[[g]]$scale))),LoperamideTreatment=g))}}
+head(df_ell)
+NMDS.mean=aggregate(NMDS[,1:2],list(group=NMDS$LoperamideTreatment),mean)
+loperamide1 <- ggplot(data=NMDS,aes(x,y,colour=LoperamideTreatment,fill=LoperamideTreatment))+theme_bw() +
+  geom_path(data=df_ell, aes(x=NMDS1, y=NMDS2, lty=LoperamideTreatment), size=1) +
+  geom_point(size=4, alpha=0.9,aes(shape=LoperamideTreatment))+scale_shape_manual(values = c(21,22,23,24,25))+
+  annotate("text",x=NMDS.mean$x,y=NMDS.mean$y,label=NMDS.mean$group,size=5, color="gray40") +
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+  theme(legend.text = element_text(size=14, colour="gray20"), legend.position = "right",
+        legend.title = element_blank(),legend.box="horizontal")+ggtitle("Timepoint 1. 24h")
+
+###
+
+
+matrixcfusmix2<-  datacfusmixtrial49 %>% ungroup()%>% filter(TrialDay==7)  %>%
+   unite("FishID", LoperamideTreatment,Timepoint_day,FishNum) %>% 
+   select(FishID, Bc1perFish:Bc10perFish) %>% 
+   column_to_rownames(var="FishID") %>% as.matrix() 
+datacfusmix2 <- datacfusmixtrial49 %>% filter(TrialDay==7)
+
+sol2<-metaMDS(matrixcfusmix2,distance = "bray", k = 2, trymax = 200)
+sol2$stress; stressplot(sol2)
+
+NMDS=data.frame(x=sol2$point[,1],y=sol2$point[,2],
+                LoperamideTreatment=as.factor(datacfusmix2$LoperamideTreatment),
+                TimepointDay=as.factor(datacfusmix2$Timepoint_day),
+                Rep=as.factor(datacfusmix2$FishNum),
+                LoperamideTimepoint=as.factor(datacfusmix2$LoperamideTimepoint))
+plot.new()
+ord<-ordiellipse(sol2, NMDS$LoperamideTreatment, display = "sites", kind ="sd", conf = 0.95, label = T)
+dev.off()
+df_ell <- data.frame()
+for(g in levels(NMDS$LoperamideTreatment)){
+  if(g!="" && (g %in% names(ord))){
+    df_ell <- rbind(df_ell, cbind(as.data.frame(with(NMDS[NMDS$LoperamideTreatment==g,],
+                                                     veganCovEllipse(ord[[g]]$cov,ord[[g]]$center,ord[[g]]$scale))),LoperamideTreatment=g))}}
+head(df_ell)
+NMDS.mean=aggregate(NMDS[,1:2],list(group=NMDS$LoperamideTreatment),mean)
+loperamide2 <-ggplot(data=NMDS,aes(x,y,colour=LoperamideTreatment,fill=LoperamideTreatment))+theme_bw() +
+  geom_path(data=df_ell, aes(x=NMDS1, y=NMDS2, lty=LoperamideTreatment), size=1) +
+  geom_point(size=4, alpha=0.9,aes(shape=LoperamideTreatment))+scale_shape_manual(values = c(21,22,23,24,25))+
+  annotate("text",x=NMDS.mean$x,y=NMDS.mean$y,label=NMDS.mean$group,size=5, color="gray40") +
+  scale_fill_manual(values=c("grey20","navy","aquamarine4"))+scale_colour_manual(values=c("grey20","navy","aquamarine4"))+
+  theme(legend.text = element_text(size=14, colour="gray20"), legend.position = "right",
+        legend.title = element_blank(),legend.box="horizontal")+ggtitle("Timepoint 2. 48h")
+
+
+###
+
+
+matrixcfusmix3<-  datacfusmixtrial49 %>% ungroup()%>% filter(TrialDay==11)  %>%
+   unite("FishID", LoperamideTreatment,Timepoint_day,FishNum) %>% 
+   select(FishID, Bc1perFish:Bc10perFish) %>% 
+   column_to_rownames(var="FishID") %>% as.matrix() 
+datacfusmix3 <- datacfusmixtrial49 %>% filter(TrialDay==11) 
+
+sol3<-metaMDS(matrixcfusmix3,distance = "bray", k = 2, trymax = 200)
+sol3$stress; stressplot(sol3)
+
+NMDS=data.frame(x=sol3$point[,1],y=sol3$point[,2],
+                LoperamideTreatment=as.factor(datacfusmix3$LoperamideTreatment),
+                TimepointDay=as.factor(datacfusmix3$Timepoint_day),
+                Rep=as.factor(datacfusmix3$FishNum),
+                LoperamideTimepoint=as.factor(datacfusmix3$LoperamideTimepoint))
+plot.new()
+ord<-ordiellipse(sol3, NMDS$LoperamideTreatment, display = "sites", kind ="sd", conf = 0.95, label = T)
+dev.off()
+df_ell <- data.frame()
+for(g in levels(NMDS$LoperamideTreatment)){
+  if(g!="" && (g %in% names(ord))){
+    df_ell <- rbind(df_ell, cbind(as.data.frame(with(NMDS[NMDS$LoperamideTreatment==g,],
+                                                     veganCovEllipse(ord[[g]]$cov,ord[[g]]$center,ord[[g]]$scale))),LoperamideTreatment=g))}}
+head(df_ell)
+NMDS.mean=aggregate(NMDS[,1:2],list(group=NMDS$LoperamideTreatment),mean)
+loperamide3 <- ggplot(data=NMDS,aes(x,y,colour=LoperamideTreatment,fill=LoperamideTreatment))+theme_bw() +
+  geom_path(data=df_ell, aes(x=NMDS1, y=NMDS2, lty=LoperamideTreatment), size=1) +
+  geom_point(size=4, alpha=0.9,aes(shape=LoperamideTreatment))+scale_shape_manual(values = c(21,22,23,24,25))+
+  annotate("text",x=NMDS.mean$x,y=NMDS.mean$y,label=NMDS.mean$group,size=5, color="gray40") +
+  scale_fill_manual(values=c("grey20","navy","aquamarine4"))+scale_colour_manual(values=c("grey20","navy","aquamarine4"))+
+  theme(legend.text = element_text(size=14, colour="gray20"), legend.position = "right",
+        legend.title = element_blank(),legend.box="horizontal")+ggtitle("Timepoint 3. 6d")
+```
+
+```{r betaallplot1,  fig.width=8, fig.height=4}
+
+library(patchwork)
+loperamide1+loperamide2+loperamide3 + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+
+```
+
+
+
+### Within group beta-diversity
+
+```{r withinbeta}
+
+matrixcfusmix<- datacfusmixtrial49 %>% ungroup() %>% 
+   unite("FishID", LoperamideTreatment,Timepoint_day,FishNum) %>% 
+   select(FishID, Bc1perFish:Bc10perFish) %>% 
+   column_to_rownames(var="FishID") %>% as.matrix()
+
+braycurtisdistances<-
+  # calculate the dissimilarity matrix between each sample
+  vegdist(matrixcfusmix, method="bray", k=2) %>% as.matrix() %>% as.data.frame() %>% 
+  # Add in the sites based on the rows (paired sample)
+  rownames_to_column(var="PairedID")  %>% mutate(PairedCondition=datacfusmixtrial49$LoperamideTimepoint) %>% 
+  # Make into longform based on the columns (OG SampleID)
+  pivot_longer(cols="Control_24hr_1":"Loperamide_6d_11", names_to="FishID") %>% 
+  # Add in sites based on the columns (OG SampleID)
+  left_join(datacfusmixtrial49) %>% 
+  # Remove rows where a sample is paired with a sample from another condition
+  filter(PairedCondition==LoperamideTimepoint) %>% 
+  # Remove the diagonal rows, where each sample was compared to itself
+  filter(value!=0)
+
+# stats
+compare_means(data=braycurtisdistances, value~LoperamideTimepoint, method="wilcox", p.adjust.method = "BH")
+compare_means(data=braycurtisdistances, value~LoperamideTimepoint, method="kruskal")
+
+# plot within condition variation
+ggplot(braycurtisdistances, aes(x=LoperamideTreatment, y=value, fill=LoperamideTreatment))+
+  geom_jitter(width=0.15, size=2, shape=23, alpha=0.7)+geom_boxplot(alpha=0.8)+
+  labs(x=NULL,y="within condition dissimilarity index",fill="Condition")+
+   facet_grid(.~Timepoint_day, space="free", scales="free")+
+   stat_compare_means(ref.group="DMSO", label="p.format")+
+  scale_fill_manual(values=c("grey20","navy","aquamarine4")) +
+  scale_y_continuous(limits=c(0,1.19), labels=c("0.00","0.25","0.50","0.75","1.00"," "))+
+  theme(legend.position = "none", strip.background = element_rect("grey90"))
+```
+
+
+
+------------------------------------------------------------------------
+
+## Water CFUs
+
+```{r waterplot, fig.width=10, fig.height=5}
+watercfustrial49 %>% 
+  ggplot(aes(x = Timepoint_hrs, y=CFUs_permL, 
+             lty=LoperamideTreatment, color=LoperamideTreatment, shape=LoperamideTreatment))+
+  facet_grid(.~Treatment)+
+  geom_point(size=3) +  geom_line(lwd=0.8) +
+  scale_y_continuous(trans = 'log10', limits=c(1e4,1e6), # expand=c(0,0),
+                     labels = trans_format('log10', math_format(10^.x)))+
+   scale_fill_manual(values=c("#000000","#004488","#44BB99"))+
+  scale_linetype_manual(values=c("solid","dotted","dashed"))+
+  labs(y="CFUs per mL", x="Time since treatment (hours)", color=NULL, shape=NULL, lty=NULL,
+       subtitle="Trial 49 Water CFUs (no replication)")+
+  theme(legend.key.width = unit(1.33,"cm"))
+#ggsave("Trial49_LoperamideWaterCFUs.png", bg="transparent", width = 11, height = 6)
+```
+
+
+
+
+
+
+------------------------------------------------------------------------
+
+## Put Mono as a mix?
+
+```{r monomixcfus, fig.width=10, fig.height=5}
+percentmono <- datacfustrial49 %>% left_join(straininfo, by=c("Treatment" = "Strain")) %>% 
+   group_by(TimepointDay, LoperamideTreatment, CodeName) %>% 
+   summarise(meanCFUs=mean(CFUs_perFish), sdCFUs=sd(CFUs_perFish)) %>% 
+   ggplot(aes(x=LoperamideTreatment, y=meanCFUs, fill=CodeName))+
+   geom_col(position="fill")+
+   facet_grid(.~TimepointDay, space="free", scales="free")+
+   theme(legend.text = element_markdown(), legend.position = "right")+
+   scale_y_continuous(labels=scales::label_percent())+ #limits=c(0,1e6))+ #
+   scale_fill_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
+   labs(x=NULL, y="mean CFUs per strain \n(% of total CFUs per condition)", fill="Strain",
+        title="Mono-reconv means as a mix")
+
+abundmono <- datacfustrial49  %>% left_join(straininfo, by=c("Treatment" = "Strain")) %>% 
+   group_by(TimepointDay, LoperamideTreatment, Treatment, CodeName) %>% 
+   summarise(meanCFUs=mean(CFUs_perFish), sdCFUs=sd(CFUs_perFish)) %>% 
+   mutate(Treatment=factor(Treatment, levels=c("Bc1","Bc2","Bc3","Bc4","Bc10"))) %>% 
+   ggplot(aes(x=LoperamideTreatment, y=meanCFUs, fill=CodeName))+
+   geom_col(position=position_dodge(width=0.8), width=0.8)+
+   geom_errorbar(aes(ymin=pmax(meanCFUs-sdCFUs,0), ymax=meanCFUs+sdCFUs),
+                 position=position_dodge(width=0.8),width=0.2)+
+   facet_grid(.~TimepointDay, space="free", scales="free")+
+    theme(legend.text = element_markdown(), legend.position = "right")+
+   scale_y_continuous(trans = 'log10', expand=c(0,0),limits=c(NA,2e6),
+                      labels = trans_format('log10', math_format(10^.x)))+
+   scale_fill_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
+   labs(x=NULL, y="mean CFUs per strain \n(% of total CFUs per condition)", fill="Strain",
+        title="Mono means as a mix")
+
+```
+
+
+```{r straintotalmean}, warning=FALSE, fig.width=10, fig.height=5}
+percentmix<- datacfusmixtrial49  %>% 
+   pivot_longer(Bc1perFish:Bc10perFish) %>% 
+   mutate(name=factor(name,
+                      levels=c("Bc1perFish","Bc2perFish","Bc3perFish","Bc4perFish","Bc10perFish"),
+                      labels=c("Bc1","Bc2","Bc3","Bc4","Bc10"))) %>% 
+   left_join(straininfo, by=c("name" = "Strain")) %>% 
+   group_by(LoperamideTreatment, TimepointDay, CodeName) %>% 
+   summarise(meanCFUs=mean(value)) %>% 
+   ggplot(aes(x=LoperamideTreatment, y=meanCFUs, fill=CodeName))+
+   geom_col(position="fill")+
+   facet_grid(.~TimepointDay, space="free", scales="free")+
+   scale_y_continuous(labels=scales::label_percent())+ #limits=c(0,1e6))+ #
+   scale_fill_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
+   theme(legend.text = element_markdown(), legend.position = "right")+
+   labs(x=NULL, y="CFUs per strain \n(% of total CFUs per fish)", fill="Strain",
+        title="Mix-reconv means per condition/timepoint")
+
+abundmix <- datacfusmixtrial49 %>% 
+   pivot_longer(Bc1perFish:Bc10perFish) %>% 
+   mutate(name=factor(name,
+                      levels=c("Bc1perFish","Bc2perFish","Bc3perFish","Bc4perFish","Bc10perFish"),
+                      labels=c("Bc1","Bc2","Bc3","Bc4","Bc10"))) %>% 
+   left_join(straininfo, by=c("name" = "Strain")) %>% 
+   group_by(CodeName, LoperamideTreatment, TimepointDay) %>% 
+   summarise(meanCFUs=mean(value), sdCFUs=sd(value)) %>% 
+   ggplot(aes(x=LoperamideTreatment, y=meanCFUs, fill=CodeName))+
+   geom_col(position=position_dodge(width=0.8), width=0.8)+
+   geom_errorbar(aes(ymin=pmax(meanCFUs-sdCFUs,0), ymax=meanCFUs+sdCFUs),
+                 position=position_dodge(width=0.8),width=0.2)+
+   facet_grid(.~TimepointDay, space="free", scales="free")+
+   scale_y_continuous(trans = 'log10', expand=c(0,0),limits=c(NA,2e6),
+                      labels = trans_format('log10', math_format(10^.x)))+
+   theme(legend.text = element_markdown(), legend.position = "right")+
+   scale_fill_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
+   labs(x=NULL, y="CFUs per strain \n(% of total CFUs per fish)", fill="Strain",
+        title="Mix means per condition/timepoint")
+```
+
+
+### As a timeline
+
+```{r}
+datacfusmixtrial49 %>% 
+   pivot_longer(Bc1perFish:Bc10perFish) %>% 
+   mutate(name=factor(name,
+                      levels=c("Bc1perFish","Bc2perFish","Bc3perFish","Bc4perFish","Bc10perFish"),
+                      labels=c("Bc1","Bc2","Bc3","Bc4","Bc10"))) %>% 
+   left_join(straininfo, by=c("name" = "Strain")) %>% 
+   group_by(CodeName, LoperamideTreatment, TimepointDay) %>% 
+   summarise(meanCFUs=mean(value), sdCFUs=sd(value)) %>% 
+   ggplot(aes(x=TimepointDay, y=meanCFUs, color=CodeName, group=CodeName))+
+   geom_point()+
+   geom_line()+
+   geom_errorbar(aes(ymin=pmax(meanCFUs-sdCFUs,0), ymax=meanCFUs+sdCFUs),width=0.2)+
+   facet_grid(.~LoperamideTreatment, space="free", scales="free")+
+   scale_y_continuous(trans = 'log10', expand=c(0,0),limits=c(NA,2e6),
+                      labels = trans_format('log10', math_format(10^.x)))+
+   theme(legend.text = element_markdown(), legend.position = "bottom")+
+   scale_color_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
+   labs(x=NULL, y="CFUs per strain \n(% of total CFUs per fish)", fill="Strain",
+        title="Mix means per condition/timepoint")
+
+datacfustrial49  %>% left_join(straininfo, by=c("Treatment" = "Strain")) %>% 
+   group_by(TimepointDay, LoperamideTreatment, Treatment, CodeName) %>% 
+   summarise(meanCFUs=mean(CFUs_perFish), sdCFUs=sd(CFUs_perFish)) %>% 
+   mutate(Treatment=factor(Treatment, levels=c("Bc1","Bc2","Bc3","Bc4","Bc10"))) %>% 
+   ggplot(aes(x=TimepointDay, y=meanCFUs, color=CodeName, group=CodeName))+
+   geom_point()+
+   geom_line()+
+   geom_errorbar(aes(ymin=pmax(meanCFUs-sdCFUs,0), ymax=meanCFUs+sdCFUs),width=0.2)+
+   facet_grid(.~LoperamideTreatment, space="free", scales="free")+
+    theme(legend.text = element_markdown(), legend.position = "bottom")+
+   scale_y_continuous(trans = 'log10', expand=c(0,0),limits=c(NA,2e6),
+                      labels = trans_format('log10', math_format(10^.x)))+
+   scale_color_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
+   labs(x=NULL, y="mean CFUs per strain \n(% of total CFUs per condition)", fill="Strain",
+        title="Mono means as a mix")
+
+
+```
+
+
+```{r, fig.width=10}
+
+percentmix/percentmono+plot_layout(guides="collect") &
+  theme(legend.position='bottom', legend.direction = "vertical")
+
+
+abundmix/abundmono+plot_layout(guides="collect") &
+  theme(legend.position='bottom')
+
+
+percentmix+percentmono+
+   (abundmix+labs(title=NULL))+(abundmono+labs(title=NULL)) +
+   plot_layout(guides="collect", nrow=2) + plot_annotation(tag_levels = "A") &
+   theme(legend.position='bottom',plot.title = element_text(size=30),
+         legend.text = element_markdown(size=20),
+         plot.tag = element_text(face = "bold", size=20)) & 
+   guides(fill = guide_legend(ncol = 3))
+
+ggsave("../LoperamideCompareMonoMixReconv.png", width=21, height=12, dpi=400)
+
+```
+Sum of the mono-reconv does not equal the mix-reconv.  
+Also, increased colonization for each strain in mono-reconv than when part of a mix.
+
+
+
+### Just controls
+
+
+
+```{r monomixcfuscon, fig.width=10, fig.height=5}
+
+monocombine <- datacfustrial49 %>% filter(LoperamideTreatment=="Control") %>% 
+   group_by(TimepointDay, Treatment) %>% 
+   summarise(meanCFUs=mean(CFUs_perFish), sdCFUs=sd(CFUs_perFish)) %>% 
+   mutate(Treatment=factor(Treatment, levels=c("Bc1","Bc2","Bc3","Bc4","Bc10"))) %>% 
+   add_column(Method="Mono-reconv") %>% rename(Strain=Treatment)
+
+mixcombine <- datacfusmixtrial49 %>% filter(LoperamideTreatment=="Control") %>% 
+   pivot_longer(Bc1perFish:Bc10perFish) %>% 
+   mutate(Strain=factor(name,
+                      levels=c("Bc1perFish","Bc2perFish","Bc3perFish","Bc4perFish","Bc10perFish"),
+                      labels=c("Bc1","Bc2","Bc3","Bc4","Bc10"))) %>% 
+   group_by(Strain, TimepointDay) %>% 
+   summarise(meanCFUs=mean(value), sdCFUs=sd(value)) %>% 
+   add_column(Method="Mix-reconv")
+
+mixcombine %>% full_join(monocombine) %>% 
+   ggplot(aes(x=TimepointDay, y=meanCFUs, fill=Strain))+
+   geom_col(position="fill")+
+   facet_wrap(Method~.)+
+   scale_y_continuous(labels=scales::label_percent(scale=100))+ #limits=c(0,1e6))+ #
+   scale_fill_manual(values = nationalparkcolors::park_palette("Saguaro", 5))+
+   labs(x=NULL, y="mean CFUs per strain", fill="Strain")
+
+mixcombine %>% full_join(monocombine) %>% 
+   ggplot(aes(x=TimepointDay, y=meanCFUs, fill=Strain))+
+   geom_col(position=position_dodge(width=0.8), width=0.8)+
+   geom_errorbar(aes(ymin=meanCFUs-sdCFUs, ymax=meanCFUs+sdCFUs), position=position_dodge(width=0.8),width=0.2)+
+   facet_wrap(Method~.)+
+   scale_fill_manual(values = nationalparkcolors::park_palette("Saguaro", 5))+
+   labs(x=NULL, y="mean CFUs per strain", fill="Strain")
+
+mixcombine %>% full_join(monocombine) %>% 
+   ggplot(aes(x=TimepointDay, y=meanCFUs, fill=Strain))+
+   geom_col(position=position_dodge(width=0.8), width=0.8)+
+   geom_errorbar(aes(ymin=meanCFUs, ymax=meanCFUs+sdCFUs), position=position_dodge(width=0.8),width=0.2)+
+   facet_wrap(Method~.)+
+   scale_fill_manual(values = nationalparkcolors::park_palette("Saguaro", 5))+
+   scale_y_log10()+
+   labs(x=NULL, y="mean CFUs per strain", fill="Strain")
+
+mixcombine %>% full_join(monocombine) %>% 
+   ggplot(aes(x=TimepointDay, y=meanCFUs, fill=Strain))+
+   geom_col(position="dodge")+
+   geom_errorbar(aes(ymin=pmin(meanCFUs-sdCFUs), ymax=meanCFUs+sdCFUs), 
+                 position=position_dodge(width=0.9),width=0.2)+
+   geom_hline(yintercept=0)+
+   facet_wrap(Method~.)+
+   scale_y_continuous(labels=scientific_10,
+                      breaks=c(0, 1e4, 5e4, 1e5, 5e5, 1e6, 2e6))+
+   scale_fill_manual(values = nationalparkcolors::park_palette("Saguaro", 5))+
+   labs(x=NULL, y="mean CFUs per strain", fill="Strain")
+
+
+```
