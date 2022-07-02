@@ -23,9 +23,9 @@ Stevick, R.J., Pérez-Pascual, D., Ghigo, JM. ....
 
 ## [16SampliconAnalysis](/16SampliconAnalysis)
 This folder contains scripts used to perform QIIME2 analysis on the 16S rRNA amplicon data, the QIIME2 output artifacts, and the R script to reproduce the figures in the manuscript.
-- [scripts/](/16SampliconAnalysis/scripts) - QIIME2 bash script and Rmd files
-- [output/](/16SampliconAnalysis/output) - QIIME2 artifacts and processed files
-- [metadata/](/16SampliconAnalysis/metadata)
+- [scripts/](16SampliconAnalysis/scripts) - QIIME2 bash script and Rmd files
+- [output/](16SampliconAnalysis/output) - QIIME2 artifacts and processed files
+- [metadata/](16SampliconAnalysis/metadata)
 
 
 ## [inVitroAnalysis](/inVitroAnalysis)

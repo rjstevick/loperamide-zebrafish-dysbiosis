@@ -3,11 +3,11 @@ This folder contains scripts used to perform QIIME2 analysis on the 16S rRNA amp
 
 Software used: QIIME2 v2020.4 and R v3.4.1
 
-## [scripts/](/scripts)
+## [scripts/](/16SampliconAnalysis/scripts)
 QIIME2 bash script and Rmd files
 
-## [output/](/output)
+## [output/](/16SampliconAnalysis/output)
 QIIME2 artifacts and processed files
 
-## [figures/](/figures)
+## [figures/](/16SampliconAnalysis/figures)
 Output from Rmd file in scripts/
