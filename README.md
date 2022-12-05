@@ -1,7 +1,7 @@
 # Raw data, processed data, and scripts for *Loperamide induces targeted dysbiosis in conventional and gnotobiotic larval zebrafish via direct bacterial inhibition*
 
 
-This repository contains the scripts, processed sequencing artifacts, and the Rmd script files to reproduce the figures in the manuscript. The raw sequences generated for this study can be found in the NCBI Short Read Archive under BioProject no. XXXXXXXXX. The corresponding accession numbers for each 16S rRNA amplicon sample are detailed in [`XXXXXXXXX_NCBI_info.xlsx`](16SampliconAnalysis/XXXXXXXX_NCBI_info.xlsx).
+This repository contains the scripts, processed sequencing artifacts, and the Rmd script files to reproduce the figures in the manuscript. The raw sequences generated for this study can be found in the NCBI Short Read Archive under BioProject no. PRJNA908751. The corresponding accession numbers for each 16S rRNA amplicon sample are detailed in [`PRJNA908751_NCBI_info.xlsx`](16SampliconAnalysis/PRJNA908751_NCBI_info.xlsx).
 
 
 ### To cite this work:
