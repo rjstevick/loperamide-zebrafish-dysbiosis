@@ -5,4 +5,3 @@ to reproduce the figures and statistics in the manuscript.
 
 - [Growth curves](GrowthCurves/)
 - [Survival in water](WaterSurvival/)  
-- Human bacterial strains - coming soon!

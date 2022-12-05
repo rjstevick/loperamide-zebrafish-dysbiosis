@@ -62,81 +62,9 @@ sigstatsbydayGrowth
 ```
 
 
-# Initial Plots
-
-
-```r
-ggplot(data, aes(x=Treatment, y=RumpAnusLength_mm, fill=Treatment, shape=Treatment))+
-   geom_jitter(width=0.2)+
-   geom_boxplot(alpha=0.8)+
-   facet_grid(.~Timepoint_Day, scales="free", space="free")+
-   stat_compare_means(ref.group = "DMSO", label="p.signif", hid.ns=TRUE)+
-   scale_shape_manual(values=c(21,22,23))+
-   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
-   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
-   labs(title="Rump-anus length",
-        y="Rump-Anus Length (mm)", caption="* stats relative to DMSO condition")+
-   theme(legend.position = "none")
-```
-
-![](LoperamideMeasurents_Trial53_files/figure-html/rumpanus-1.png)<!-- -->
-
-
-```r
-ggplot(data, aes(x=Treatment, y=TailWidth_mm, fill=Treatment, shape=Treatment))+
-   geom_jitter(width=0.2)+
-   geom_boxplot(alpha=0.8)+
-   facet_grid(.~Timepoint_Day, scales="free", space="free")+
-   stat_compare_means(ref.group = "DMSO", label="p.signif", hid.ns=TRUE)+
-   scale_shape_manual(values=c(21,22,23))+
-   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
-   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
-   labs(title="Tail width",
-        y="Tail width (mm)", caption="* stats relative to DMSO condition")+
-   theme(legend.position = "none")
-```
-
-![](LoperamideMeasurents_Trial53_files/figure-html/tailwidth-1.png)<!-- -->
-
-
-
-```r
-ggplot(data, aes(x=Treatment, y=EyeDiameter_mm, fill=Treatment, shape=Treatment))+
-   geom_jitter(width=0.2)+
-   geom_boxplot(alpha=0.8)+
-   facet_grid(.~Timepoint_Day, scales="free", space="free")+
-   stat_compare_means(ref.group = "DMSO", label="p.signif", hid.ns=TRUE)+
-   scale_shape_manual(values=c(21,22,23))+
-   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
-   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
-   labs(title="Eye diameter", y="Eye diameter (mm)", caption="* stats relative to DMSO condition")+
-   theme(legend.position = "none")
-```
-
-![](LoperamideMeasurents_Trial53_files/figure-html/eyediam-1.png)<!-- -->
-
-
-
-```r
-ggplot(data, aes(x=Treatment, y=Length_mm, fill=Treatment, shape=Treatment))+
-   geom_jitter(width=0.2)+
-   geom_boxplot(alpha=0.8)+
-   facet_grid(.~Timepoint_Day, scales="free", space="free")+
-   stat_compare_means(ref.group = "DMSO", label="p.signif", hid.ns=TRUE)+
-   scale_shape_manual(values=c(21,22,23))+
-   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
-   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
-   labs(title="Fish Length",y="Fish length (mm)", caption="* stats relative to DMSO condition")+
-   theme(legend.position = "none")
-```
-
-![](LoperamideMeasurents_Trial53_files/figure-html/length-1.png)<!-- -->
-
 
 
 # All together
-
-## By day
 
 
 ```r
@@ -163,61 +91,12 @@ data %>% pivot_longer(Length_mm:EyeDiameter_mm) %>%
    guides(fill=guide_legend(override.aes = list(size=8)))
 ```
 
-![](LoperamideMeasurents_Trial53_files/figure-html/together-1.png)<!-- -->
+![](LoperamideFishMeasurents_files/figure-html/together-1.png)<!-- -->
 
 ```r
-ggsave("fishgrowth_loperamide.png", bg="transparent", width=10)
-```
-### formatted for ppt
-
-
-```r
-data %>% pivot_longer(Length_mm:EyeDiameter_mm) %>% 
-   mutate(Parameter=factor(name, levels=c("Length_mm", "RumpAnusLength_mm", "TailWidth_mm", "EyeDiameter_mm"),
-                           labels=c("Fish Length", "Rump-Anus Length", "Tail Width", "Eye Diameter"))) %>% 
-   ggplot(aes(x=Timepoint_Day, y=value, fill=Treatment, shape=Treatment))+
-   geom_point(position=position_jitterdodge(jitter.width = 0.1,jitter.height = 0))+
-   geom_boxplot(alpha=0.8)+
-   facet_wrap(.~Parameter, scales="free")+
-   scale_shape_manual(values=c(21,22,23))+
-   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
-   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
-   labs(y="Measurement (mm)", x="Timepoint")+
-   theme(text=element_text(family="Avenir"), legend.position = "right", title = element_text(size=20, face="bold"),
-         strip.text = element_text(size=20, face="bold"),
-         legend.background = element_blank(),
-         plot.background = element_blank(),
-         strip.background = element_blank(),
-         panel.background = element_rect(size=1, fill="white", color="transparent"))
+ggsave("FigureS6_fishgrowth_loperamide.png", bg="transparent", width=10)
 ```
 
-![](LoperamideMeasurents_Trial53_files/figure-html/togetheravenir-1.png)<!-- -->
-
-```r
-ggsave("fishgrowth_loperamide_avenir.png", bg="transparent", width=14)
-```
-
-
-## By treatment
-
-
-```r
-data %>% pivot_longer(Length_mm:EyeDiameter_mm) %>% 
-   mutate(Parameter=factor(name, levels=c("Length_mm", "RumpAnusLength_mm", "TailWidth_mm", "EyeDiameter_mm"),
-                           labels=c("Fish Length", "Rump-Anus Length", "Tail Width", "Eye Diameter"))) %>% 
-   ggplot(aes(x=Treatment, y=value, fill=Timepoint_Day, shape=Timepoint_Day))+
-   geom_point(position=position_jitterdodge(jitter.width = 0.1,jitter.height = 0))+
-   geom_boxplot(alpha=0.7)+
-   facet_wrap(.~Parameter, scales="free")+
-   scale_shape_manual(values=c(21,22,23))+
-   scale_fill_manual(values=c("grey90","grey50","grey10"))+
-   labs(y="Measurement (mm)", x="Treatment", fill="Timepoint", shape="Timepoint")+
-   theme(legend.position = "bottom", title = element_text(size=20, face="bold"),
-         strip.text = element_text(size=20, face="bold"),
-         legend.background = element_rect(fill="grey90", color="transparent"))
-```
-
-![](LoperamideMeasurents_Trial53_files/figure-html/together2-1.png)<!-- -->
 
 # Session info
 
