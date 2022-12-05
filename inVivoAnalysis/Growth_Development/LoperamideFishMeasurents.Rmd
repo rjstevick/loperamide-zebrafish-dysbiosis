@@ -1,7 +1,6 @@
 ---
 title: "Loperamide growth measurements"
 author: "Rebecca Stevick"
-date: "4/12/2022"
 output:
   html_document:
     toc: true
@@ -14,7 +13,6 @@ output:
 
 # About the data
 
-By Seb at Zorgl'hub, fish from Trial 53
 10 fish per condition
 
 Conventional fish treated with loperamide at 5 dpf for 24 hours.
@@ -57,7 +55,7 @@ knitr::opts_chunk$set(echo=TRUE, warning=FALSE,message=FALSE)
 
 ```{r import}
 
-data <- readxl::read_xlsx("Data ZH1902_240322.xlsx")
+data <- readxl::read_xlsx("Data ZH1902.xlsx")
 
 ```
 
@@ -74,7 +72,6 @@ data %>% pivot_longer(Length_mm:EyeDiameter_mm) %>%
                  group.by = c("Parameter","Timepoint_Day")) -> statsbydayGrowth
 
 sigstatsbydayGrowth <- statsbydayGrowth %>% filter(p.format<0.05 & group1=="DMSO")
-sigstatsbydayGrowth
 
 ```
 

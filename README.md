@@ -32,7 +32,6 @@ This folder contains scripts used to perform QIIME2 analysis on the 16S rRNA amp
 This folder contains all the raw data files and the scripts to reproduce the figures and statistics in the manuscript.  
 - [Growth curves](inVitroAnalysis/GrowthCurves)
 - [Survival in water](inVitroAnalysis/WaterSurvival)  
-- Human bacterial strains
 
 
 ## [inVivoAnalysis](/inVivoAnalysis)
@@ -40,13 +39,15 @@ This folder contains all the raw data files and the scripts to reproduce the fig
 - [Mono-reconv CFUs](inVivoAnalysis/Mono)
 - [Mix-reconv CFUs](inVivoAnalysis/MixA)
 - [Fish growth and development](inVivoAnalysis/Growth_Development)
-- Fish survival in Loperamide
 
 
 -------------------------------------------------------------------------
 
 
 ![schematic](figures/LoperamideExperimentalSchematic.png)  
+
+
+-------------------------------------------------------------------------
 
 <br>
 

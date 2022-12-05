@@ -1,7 +1,6 @@
 ---
 title: "Loperamide growth measurements"
 author: "Rebecca Stevick"
-date: "4/12/2022"
 output:
   html_document:
     toc: true
@@ -14,7 +13,6 @@ output:
 
 # About the data
 
-By Seb at Zorgl'hub, fish from Trial 53
 10 fish per condition
 
 Conventional fish treated with loperamide at 5 dpf for 24 hours.
@@ -34,7 +32,7 @@ Conventional fish treated with loperamide at 5 dpf for 24 hours.
 
 
 ```r
-data <- readxl::read_xlsx("Data ZH1902_240322.xlsx")
+data <- readxl::read_xlsx("Data ZH1902.xlsx")
 ```
 
 # Stats of all conditions
@@ -50,15 +48,6 @@ data %>% pivot_longer(Length_mm:EyeDiameter_mm) %>%
                  group.by = c("Parameter","Timepoint_Day")) -> statsbydayGrowth
 
 sigstatsbydayGrowth <- statsbydayGrowth %>% filter(p.format<0.05 & group1=="DMSO")
-sigstatsbydayGrowth
-```
-
-```
-## # A tibble: 1 × 10
-##   Parameter     Timepoint_Day .y.   group1 group2      p p.adj p.format p.signif
-##   <fct>         <fct>         <chr> <chr>  <chr>   <dbl> <dbl> <chr>    <chr>   
-## 1 D. Eye Diame… T5            value DMSO   Loper… 0.0287     1 0.029    *       
-## # … with 1 more variable: method <chr>
 ```
 
 
