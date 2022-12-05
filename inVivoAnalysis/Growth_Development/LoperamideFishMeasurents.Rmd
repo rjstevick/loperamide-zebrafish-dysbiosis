@@ -108,6 +108,8 @@ data %>% pivot_longer(Length_mm:EyeDiameter_mm) %>%
    guides(fill=guide_legend(override.aes = list(size=8)))
 
 ggsave("FigureS6_fishgrowth_loperamide.png", bg="transparent", width=10)
+ggsave("FigureS6_fishgrowth_loperamide.tiff", bg="transparent", width=10)
+ggsave("FigureS6_fishgrowth_loperamide.pdf", bg="transparent", width=10)
 
 ```
 

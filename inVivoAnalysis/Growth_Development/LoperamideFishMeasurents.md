@@ -95,6 +95,8 @@ data %>% pivot_longer(Length_mm:EyeDiameter_mm) %>%
 
 ```r
 ggsave("FigureS6_fishgrowth_loperamide.png", bg="transparent", width=10)
+ggsave("FigureS6_fishgrowth_loperamide.tiff", bg="transparent", width=10)
+ggsave("FigureS6_fishgrowth_loperamide.pdf", bg="transparent", width=10)
 ```
 
 
