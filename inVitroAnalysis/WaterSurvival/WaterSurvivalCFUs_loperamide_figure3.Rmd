@@ -1,7 +1,6 @@
 ---
 title: "Water Loperamide CFUs"
 author: "Rebecca Stevick"
-date: "updated 2022.12.05"
 output:
   html_document:
     toc: true
@@ -33,7 +32,6 @@ At each timepoint:
 Make 0 to -3 dilutions in 96-well plates, in triplicate\
 Plate 10 µL microdrops on big square plates.\
 2 square plates total per timepoint
-
 
 Put plates at 28C for 2 days, then count colonies.
 
@@ -118,6 +116,7 @@ datacfus4 <-
                                     labels=c("Control","DMSO", "Loperamide")),
          Treatment = factor(Treatment, levels=c("W6","W8","Mz8")))
 
+# import individual strain data from exp 5
 datacfus5 <-
    readxl::read_xlsx("LoperamideWaterSurvivalCFUs_sub.xlsx", sheet="Round5") %>%
    drop_na(DF) %>%
@@ -127,9 +126,7 @@ datacfus5 <-
          Treatment = factor(Treatment, levels=c("W6","W8","Mz8","Fjohn","Mz1")))
 
 
-straininfo <- readxl::read_xlsx("../../LoperamideStrainInfo.xlsx") %>%
-   mutate(Strain=recode(Strain, "W6t"="W6"))
-
+straininfo <- readxl::read_xlsx("../../LoperamideStrainInfo.xlsx")
 
 dataallCFUs <- full_join(datacfus1, datacfus2) %>%
    full_join(datacfus3) %>%
@@ -189,7 +186,7 @@ dataallCFUs %>% filter(LoperamideTreatment=="Control") %>%
 
 ### Timeline for each strain with mean
 
-```{r timelineplotall, fig.height=7, fig.width=15}
+```{r timelineplotall, fig.height=8, fig.width=18}
 
 statsbydayCFUsformat <- statsbydayCFUs %>% filter(p.signif!="ns")
 
@@ -216,7 +213,15 @@ dataallCFUs %>% pivot_longer(Rep1:Rep3) %>%
         panel.grid.minor.x = element_blank(),panel.grid.minor.y = element_blank(),
         legend.text = element_text(size=18), legend.key.width = unit(2,"cm"))
 
+ggsave("Figure3_WaterInVitro_LoperamideCFUs.png", bg="transparent", width = 19, height = 9.5)
 ggsave("Figure3_WaterInVitro_LoperamideCFUs.tiff", bg="transparent", width = 19, height = 9.5)
 ggsave("Figure3_WaterInVitro_LoperamideCFUs.pdf", bg="transparent", width = 19, height = 9.5)
+
+```
+
+
+```{r session}
+
+sessionInfo()
 
 ```

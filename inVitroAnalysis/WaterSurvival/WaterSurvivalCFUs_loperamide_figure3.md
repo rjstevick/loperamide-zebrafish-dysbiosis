@@ -1,7 +1,6 @@
 ---
 title: "Water Loperamide CFUs"
 author: "Rebecca Stevick"
-date: "updated 2022.12.05"
 output:
   html_document:
     toc: true
@@ -33,7 +32,6 @@ At each timepoint:
 Make 0 to -3 dilutions in 96-well plates, in triplicate\
 Plate 10 µL microdrops on big square plates.\
 2 square plates total per timepoint
-
 
 Put plates at 28C for 2 days, then count colonies.
 
@@ -118,6 +116,7 @@ datacfus4 <-
                                     labels=c("Control","DMSO", "Loperamide")),
          Treatment = factor(Treatment, levels=c("W6","W8","Mz8")))
 
+# import individual strain data from exp 5
 datacfus5 <-
    readxl::read_xlsx("LoperamideWaterSurvivalCFUs_sub.xlsx", sheet="Round5") %>%
    drop_na(DF) %>%
@@ -155,9 +154,7 @@ statsbydayCFUs <- compare_means(data=longdata,
                             group.by = c("Treatment","Timepoint_hrs")) %>%
    left_join(straininfo, by=c("Treatment"="Strain")) %>%
    mutate(CodeName=factor(CodeName, levels=unique(straininfo$CodeName)))
-gt::gt(statsbydayCFUs %>% filter(p.format<0.05 & group1=="DMSO"))
 ```
-
 
 
 ## All together now
@@ -221,6 +218,60 @@ dataallCFUs %>% pivot_longer(Rep1:Rep3) %>%
 ![](WaterSurvivalCFUs_loperamide_figure3_files/figure-html/timelineplotall-1.png)<!-- -->
 
 ```r
+ggsave("Figure3_WaterInVitro_LoperamideCFUs.png", bg="transparent", width = 19, height = 9.5)
 ggsave("Figure3_WaterInVitro_LoperamideCFUs.tiff", bg="transparent", width = 19, height = 9.5)
 ggsave("Figure3_WaterInVitro_LoperamideCFUs.pdf", bg="transparent", width = 19, height = 9.5)
+```
+
+
+
+```r
+sessionInfo()
+```
+
+```
+## R version 4.1.3 (2022-03-10)
+## Platform: x86_64-apple-darwin17.0 (64-bit)
+## Running under: macOS Big Sur/Monterey 10.16
+## 
+## Matrix products: default
+## BLAS:   /Library/Frameworks/R.framework/Versions/4.1/Resources/lib/libRblas.0.dylib
+## LAPACK: /Library/Frameworks/R.framework/Versions/4.1/Resources/lib/libRlapack.dylib
+## 
+## locale:
+## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+## 
+## attached base packages:
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## 
+## other attached packages:
+##  [1] rmdformats_1.0.3 ggtext_0.1.1     ungeviz_0.1.0    ggpubr_0.4.0    
+##  [5] scales_1.1.1     forcats_0.5.1    stringr_1.4.0    dplyr_1.0.8     
+##  [9] purrr_0.3.4      readr_2.1.2      tidyr_1.2.0      tibble_3.1.6    
+## [13] ggplot2_3.3.5    tidyverse_1.3.1 
+## 
+## loaded via a namespace (and not attached):
+##  [1] Rcpp_1.0.8.3             lubridate_1.8.0          assertthat_0.2.1        
+##  [4] digest_0.6.29            utf8_1.2.2               R6_2.5.1                
+##  [7] cellranger_1.1.0         backports_1.4.1          reprex_2.0.1            
+## [10] evaluate_0.15            highr_0.9                httr_1.4.2              
+## [13] pillar_1.7.0             rlang_1.0.2              readxl_1.4.0            
+## [16] rstudioapi_0.13          car_3.0-12               jquerylib_0.1.4         
+## [19] nationalparkcolors_0.1.0 rmarkdown_2.13           labeling_0.4.2          
+## [22] gridtext_0.1.4           munsell_0.5.0            broom_0.7.12            
+## [25] compiler_4.1.3           modelr_0.1.8             xfun_0.30               
+## [28] pkgconfig_2.0.3          htmltools_0.5.2          tidyselect_1.1.2        
+## [31] bookdown_0.25            fansi_1.0.3              crayon_1.5.1            
+## [34] tzdb_0.3.0               dbplyr_2.1.1             withr_2.5.0             
+## [37] grid_4.1.3               jsonlite_1.8.0           gtable_0.3.0            
+## [40] lifecycle_1.0.1          DBI_1.1.2                magrittr_2.0.3          
+## [43] cli_3.2.0                stringi_1.7.6            carData_3.0-5           
+## [46] farver_2.1.0             ggsignif_0.6.3           fs_1.5.2                
+## [49] xml2_1.3.3               bslib_0.3.1              ellipsis_0.3.2          
+## [52] generics_0.1.2           vctrs_0.4.0              tools_4.1.3             
+## [55] strapgod_0.0.4.9000      glue_1.6.2               markdown_1.1            
+## [58] hms_1.1.1                abind_1.4-5              fastmap_1.1.0           
+## [61] yaml_2.3.5               colorspace_2.0-3         rstatix_0.7.0           
+## [64] rvest_1.0.2              knitr_1.38               haven_2.4.3             
+## [67] sass_0.4.1
 ```
