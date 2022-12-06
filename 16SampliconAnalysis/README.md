@@ -18,6 +18,7 @@ QIIME2 artifacts and processed files
 
 ## [figures/](figures/)
 Output from Rmd file in scripts/  
+Each file is named according to the manuscript  
 
 ## [metadata/](metadata/)
 
