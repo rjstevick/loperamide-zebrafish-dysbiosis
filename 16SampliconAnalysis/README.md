@@ -5,8 +5,8 @@ Software used: QIIME2 v2020.4 and R v3.4.1
 
 ## [scripts/](scripts/)
 QIIME2 bash script and Rmd files  
-- Main QIIME2 script with all commands (00_qiime2_alltogether.sh)
-- Loperamide16Samplicon_analysis.Rmd, and knitted outputs
+- 00_qiime2_alltogether.sh: Main QIIME2 script with all commands
+- Loperamide16Samplicon_analysis.Rmd and knitted outputs
 
 ## [output/](output/)
 QIIME2 artifacts and processed files  
@@ -18,9 +18,10 @@ QIIME2 artifacts and processed files
 
 ## [figures/](figures/)
 Output from Rmd file in scripts/  
-Each file is named according to the manuscript  
+Each file is named according to the manuscript figure  
 
 ## [metadata/](metadata/)
 
-- **sample-manifest.csv** - file to import raw sequence files into QIIME2 .qza format using `qiime tools import`
-- **Metadata.txt** - metadata file formatted for QIIME2 import during `qiime feature-table summarize`
+- **Loperamide16Samplicon_manifest.txt** - file to import raw sequence files into QIIME2 .qza format using `qiime tools import`
+- **Loperamide16Samplicon_metadata.txt** - metadata file formatted for QIIME2 import during `qiime feature-table summarize`  
+- **PRJNA908751_NCBI_info.xlsx** - corresponding accession numbers for each 16S rRNA amplicon sample files

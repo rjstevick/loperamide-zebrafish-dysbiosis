@@ -136,7 +136,7 @@ knitr::opts_chunk$set(warning=FALSE,message=FALSE)
 
 ```{r import}
 
-metadatafile <- "../metadata/YersiniaLoperamide16Samplicon_metadata.txt"
+metadatafile <- "../metadata/Loperamide16Samplicon_metadata.txt"
 tablefile <- "../output/table.qza"
 taxonomyfile <- "../output/taxonomy.qza"
 treefile <- "../output/rooted-tree.qza"

@@ -219,7 +219,7 @@ Get conventional panel from 16S script
 
 ```{r alhpasimpconv, eval=FALSE}
 
-convalpha2 + mixalpha + labs(y=NULL) + 
+convalpha + mixalpha + labs(y=NULL) + 
    plot_layout(guides="collect")+plot_annotation(tag_levels = "A") & 
    theme(legend.position="bottom",plot.tag = element_text(face = "bold", size=20))
 ggsave("Figure6_AlphaDiversity_Conv_Mix5.png", bg="transparent", width = 8, height = 5)
