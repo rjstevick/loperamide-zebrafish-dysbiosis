@@ -54,11 +54,11 @@ Made using BioRender
 <img src="inVivoAnalysis/Mono/Figure4_LoperamideMonoColonization_withControl.png" width="200">
 
 ### Fig 5. Mix-colonization
-[ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd) <br>
+[ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd#L159) <br>
 <img src="inVivoAnalysis/Mix/Figure5_MixReconvPlots.png" width=200>
 
 ### Fig 6. Alpha-diversity comparison
-[ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd) <br>
+[ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd#L216) <br>
 <img src="inVivoAnalysis/Mix/Figure6_AlphaDiversity_Conv_Mix5.png" width=200>
 
 
@@ -87,7 +87,7 @@ Made using BioRender
 [LoperamideFishMeasurements.Rmd](inVivoAnalysis/Growth_Development/LoperamideFishMeasurents.Rmd) <br>
 <img src="inVivoAnalysis/Growth_Development/FigureS6_fishgrowth_loperamide.png" width="200">
 
-### Fig S7. Bacterial growth
+### Fig S7. Bacterial growth  
 [LoperamideGrowthCurves.Rmd](inVitroAnalysis/GrowthCurves/LoperamideGrowthCurves_S10.Rmd) <br>
 <img src="inVitroAnalysis/GrowthCurves/FigureS7_GrowthCurvesLoperamide.png" width="200">
 
@@ -96,7 +96,7 @@ Made using BioRender
 <img src="inVivoAnalysis/Mono/FigureS8_WaterSurvivalFishMono.png" width="200">
 
 ### Fig S9. Compare Mix vs Water  
-[ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd) <br>
+[ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd#L337) <br>
 <img src="inVivoAnalysis/Mix/FigureS9_CompareMonoMixReconv.png" width=200>
 
 
