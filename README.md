@@ -37,67 +37,26 @@ This folder contains all the raw data files and the scripts to reproduce the fig
 
 # Figure index
 
-### Fig 1. Experimental schematic  
-Made using BioRender  
-<img src="figures/Figure1_LoperamideExperimentalSchematic.png" width="300">
 
-### Fig 2. Conventional microbiota changes  
-[Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd)  <br>
-<img src="16SampliconAnalysis/figures/Figure2_LoperamideBetaAll_LimmaGenus.png" width="200">
+|  Fig | Description | Code | Figure |
+| :---: | :------ | :--- | :----: |
+| 1 | Experimental schematic | Made using BioRender | <img src="figures/Figure1_LoperamideExperimentalSchematic.png" width="300"> |
+| 2 | Conventional microbiota changes | [Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd) | <img src="16SampliconAnalysis/figures/Figure2_LoperamideBetaAll_LimmaGenus.png" width="200"> |
+| 3 | Bacterial survival | [WaterSurvivalCFUs_loperamide.Rmd](inVitroAnalysis/WaterSurvival/WaterSurvivalCFUs_loperamide_figure3.Rmd) | <img src="inVitroAnalysis/WaterSurvival/Figure3_WaterInVitro_LoperamideCFUs.png" width="200"> |
+| 4 | Mono-colonization | [ZebrafishMonoCFUs_loperamide.Rmd](inVivoAnalysis/Mono/ZebrafishMonoCFUs_loperamide.Rmd) | <img src="inVivoAnalysis/Mono/Figure4_LoperamideMonoColonization_withControl.png" width="200"> |
+| 5 | Mix-colonization | [ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd#L159) | <img src="inVivoAnalysis/Mix/Figure5_MixReconvPlots.png" width=200> |
+| 6 | Alpha-diversity comparison | [ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd#L216) | <img src="inVivoAnalysis/Mix/Figure6_AlphaDiversity_Conv_Mix5.png" width=200> |
+|||||
+| S1 | QC and rarefaction curves | [Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd) | <img src="16SampliconAnalysis/figures/FigureS1_16SLoperamideQC_rarecurve_reads.png" width="200"> |
+| S2 | Sequencing controls  | [Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd)  | <img src="16SampliconAnalysis/figures/FigureS2_LoperamideQC_mocknegativecontrols.png" height="100"> |
+| S3 | Phylum barplot  | [Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd) | <img src="16SampliconAnalysis/figures/FigureS3_LoperamideBarsPhylum.png" width="200"> |
+| S4 | Genus barplot and venn diagram | [Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd) | <img src="16SampliconAnalysis/figures/FigureS4_LoperamideBarsGenusUpset.png" width="100"> |
+| S5 | All samples beta-diversity | [Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd) | <img src="16SampliconAnalysis/figures/FigureS5_16Sloperamide_BetaDaysAndWithinDiv.png" width="100"> |
+| S6 | Zebrafish growth | [LoperamideFishMeasurements.Rmd](inVivoAnalysis/Growth_Development/LoperamideFishMeasurents.Rmd) | <img src="inVivoAnalysis/Growth_Development/FigureS6_fishgrowth_loperamide.png" width="200"> |
+| S7 | Bacterial growth | [LoperamideGrowthCurves.Rmd](inVitroAnalysis/GrowthCurves/LoperamideGrowthCurves_S10.Rmd) | <img src="inVitroAnalysis/GrowthCurves/FigureS7_GrowthCurvesLoperamide.png" width="200"> |
+| S8 | Compare Mono vs Water | [ZebrafishMonoCFUs_loperamide.Rmd](inVivoAnalysis/Mono/ZebrafishMonoCFUs_loperamide.Rmd) | <img src="inVivoAnalysis/Mono/FigureS8_WaterSurvivalFishMono.png" width="200"> |
+| S9 | Compare Mix vs Mono | [ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd#L337) |<img src="inVivoAnalysis/Mix/FigureS9_CompareMonoMixReconv.png" width=200> |
 
-### Fig 3. Bacterial survival
-[WaterSurvivalCFUs_loperamide.Rmd](inVitroAnalysis/WaterSurvival/WaterSurvivalCFUs_loperamide_figure3.Rmd) <br>
-<img src="inVitroAnalysis/WaterSurvival/Figure3_WaterInVitro_LoperamideCFUs.png" width="200">
-
-### Fig 4. Mono-colonization
-[ZebrafishMonoCFUs_loperamide.Rmd](inVivoAnalysis/Mono/ZebrafishMonoCFUs_loperamide.Rmd) <br>
-<img src="inVivoAnalysis/Mono/Figure4_LoperamideMonoColonization_withControl.png" width="200">
-
-### Fig 5. Mix-colonization
-[ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd#L159) <br>
-<img src="inVivoAnalysis/Mix/Figure5_MixReconvPlots.png" width=200>
-
-### Fig 6. Alpha-diversity comparison
-[ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd#L216) <br>
-<img src="inVivoAnalysis/Mix/Figure6_AlphaDiversity_Conv_Mix5.png" width=200>
-
-
-
-### Fig S1. QC and rarefaction curves  
-[Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd)  
-<img src="16SampliconAnalysis/figures/FigureS1_16SLoperamideQC_rarecurve_reads.png" width="200">  
-
-### Fig S2. Sequencing controls  
-[Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd)  
-<img src="16SampliconAnalysis/figures/FigureS2_LoperamideQC_mocknegativecontrols.png" height="200">
-
-### Fig S3. Phylum barplot  
-[Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd)  
-<img src="16SampliconAnalysis/figures/FigureS3_LoperamideBarsPhylum.png" width="200">
-
-### Fig S4. Genus barplot and venn diagram  
-[Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd)  
-<img src="16SampliconAnalysis/figures/FigureS4_LoperamideBarsGenusUpset.png" width="200">
-
-### Fig S5. All samples beta-diversity  
-[Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd)  
-<img src="16SampliconAnalysis/figures/FigureS5_16Sloperamide_BetaDaysAndWithinDiv.png" width="100">
-
-### Fig S6. Zebrafish growth  
-[LoperamideFishMeasurements.Rmd](inVivoAnalysis/Growth_Development/LoperamideFishMeasurents.Rmd) <br>
-<img src="inVivoAnalysis/Growth_Development/FigureS6_fishgrowth_loperamide.png" width="200">
-
-### Fig S7. Bacterial growth  
-[LoperamideGrowthCurves.Rmd](inVitroAnalysis/GrowthCurves/LoperamideGrowthCurves_S10.Rmd) <br>
-<img src="inVitroAnalysis/GrowthCurves/FigureS7_GrowthCurvesLoperamide.png" width="200">
-
-### Fig S8. Compare Mono vs Water  
-[ZebrafishMonoCFUs_loperamide.Rmd](inVivoAnalysis/Mono/ZebrafishMonoCFUs_loperamide.Rmd) <br>
-<img src="inVivoAnalysis/Mono/FigureS8_WaterSurvivalFishMono.png" width="200">
-
-### Fig S9. Compare Mix vs Water  
-[ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd#L337) <br>
-<img src="inVivoAnalysis/Mix/FigureS9_CompareMonoMixReconv.png" width=200>
 
 
 -------------------------------------------------------------------------
