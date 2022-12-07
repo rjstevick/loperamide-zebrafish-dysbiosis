@@ -6,7 +6,7 @@ This repository contains the scripts, processed sequencing artifacts, and the Rm
 ### To cite this work:
 Stevick, R.J., Ghigo, J-M. & Pérez-Pascual, D. ....
 
-### This repository has been archived on Zenodo. Access or cite the most recent release:  
+### This repository has been archived on Zenodo. Access or cite the most recent release:  XXXXXXX
 
 ----------------------------------------------------------------------  
 
@@ -38,7 +38,7 @@ This folder contains all the raw data files and the scripts to reproduce the fig
 # Figure index
 
 
-|  Fig | Description | Code | Figure |
+| Fig | Description | Code | Figure |
 | :---: | :------ | :--- | :----: |
 | 1 | Experimental schematic | Made using BioRender | <img src="figures/Figure1_LoperamideExperimentalSchematic.png" width="300"> |
 | 2 | Conventional microbiota changes | [Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd#L605) | <img src="16SampliconAnalysis/figures/Figure2_LoperamideBetaAll_LimmaGenus.png" width="200"> |
@@ -46,7 +46,10 @@ This folder contains all the raw data files and the scripts to reproduce the fig
 | 4 | Mono-colonization | [ZebrafishMonoCFUs_loperamide.Rmd](inVivoAnalysis/Mono/ZebrafishMonoCFUs_loperamide.Rmd#L116) | <img src="inVivoAnalysis/Mono/Figure4_LoperamideMonoColonization_withControl.png" width="200"> |
 | 5 | Mix-colonization | [ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd#L102) | <img src="inVivoAnalysis/Mix/Figure5_MixReconvPlots.png" width=200> |
 | 6 | Alpha-diversity comparison | [ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd#L180) | <img src="inVivoAnalysis/Mix/Figure6_AlphaDiversity_Conv_Mix5.png" width=200> |
-|||||
+-------------------------------------------------------------------------
+
+| Supp Fig | Description | Code | Figure |
+| :---: | :------ | :--- | :----: |
 | S1 | QC and rarefaction curves | [Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd#L279) | <img src="16SampliconAnalysis/figures/FigureS1_16SLoperamideQC_rarecurve_reads.png" width="200"> |
 | S2 | Sequencing controls  | [Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd#L375)  | <img src="16SampliconAnalysis/figures/FigureS2_LoperamideQC_mocknegativecontrols.png" height="100"> |
 | S3 | Phylum barplot  | [Loperamide16Samplicon_analysis.Rmd](16SampliconAnalysis/scripts/Loperamide16Samplicon_analysis.Rmd#L463) | <img src="16SampliconAnalysis/figures/FigureS3_LoperamideBarsPhylum.png" width="200"> |
