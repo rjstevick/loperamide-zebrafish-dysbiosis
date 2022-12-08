@@ -4,9 +4,11 @@
 This repository contains the scripts, processed sequencing artifacts, and the Rmd script files to reproduce the figures in the manuscript. The raw sequences generated for this study can be found in the NCBI Short Read Archive under BioProject no. PRJNA908751. The corresponding accession numbers for each 16S rRNA amplicon sample are detailed in [`PRJNA908751_NCBI_info.xlsx`](16SampliconAnalysis/metadata/PRJNA908751_NCBI_info.xlsx).
 
 ### To cite this work:
-Stevick, R.J., Ghigo, J-M. & Pérez-Pascual, D. ....
+Stevick, R.J., Ghigo, J-M. & Pérez-Pascual, D. (2022) Anti-diarrheal drug loperamide induces microbial dysbiosis in larval zebrafish via targeted bacterial inhibition. ...
 
-### This repository has been archived on Zenodo. Access or cite the most recent release:  XXXXXXX
+### This repository has been archived on Zenodo. Access or cite the most recent release:  
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7415697.svg)](https://doi.org/10.5281/zenodo.7415697)
+
 
 ----------------------------------------------------------------------  
 
