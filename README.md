@@ -1,10 +1,10 @@
-# Raw data, processed data, and scripts for *Anti-diarrheal drug loperamide induces microbial dysbiosis in larval zebrafish via targeted bacterial inhibition*
+# Raw data, processed data, and scripts for *Anti-diarrheal drug loperamide induces dysbiosis in zebrafish microbiota via targeted bacterial inhibition*
 
 
-This repository contains the scripts, processed sequencing artifacts, and the Rmd script files to reproduce the figures in the manuscript. The raw sequences generated for this study can be found in the NCBI Short Read Archive under BioProject no. PRJNA908751. The corresponding accession numbers for each 16S rRNA amplicon sample are detailed in [`PRJNA908751_NCBI_info.xlsx`](16SampliconAnalysis/metadata/PRJNA908751_NCBI_info.xlsx).
+This repository contains the scripts, processed sequencing artifacts, and the Rmd script files to reproduce the figures in the manuscript. The raw sequences generated for this study can be found in the NCBI Short Read Archive under [BioProject no. PRJNA908751](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA908751). The corresponding accession numbers for each 16S rRNA amplicon sample are detailed in [`PRJNA908751_NCBI_info.xlsx`](16SampliconAnalysis/metadata/PRJNA908751_NCBI_info.xlsx).
 
 ### To cite this work:
-Stevick, R.J., Ghigo, J-M. & Pérez-Pascual, D. (2022) Anti-diarrheal drug loperamide induces microbial dysbiosis in larval zebrafish via targeted bacterial inhibition. ...
+Stevick, R.J., Ghigo, J-M. & Pérez-Pascual, D. (2022) Anti-diarrheal drug loperamide induces dysbiosis in zebrafish microbiota via targeted bacterial inhibition. ...
 
 ### This repository has been archived on Zenodo. Access or cite the most recent release:  
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7415697.svg)](https://doi.org/10.5281/zenodo.7415697)
@@ -48,6 +48,7 @@ This folder contains all the raw data files and the scripts to reproduce the fig
 | 4 | Mono-colonization | [ZebrafishMonoCFUs_loperamide.Rmd](inVivoAnalysis/Mono/ZebrafishMonoCFUs_loperamide.Rmd#L116) | <img src="inVivoAnalysis/Mono/Figure4_LoperamideMonoColonization_withControl.png" width="200"> |
 | 5 | Mix-colonization | [ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd#L102) | <img src="inVivoAnalysis/Mix/Figure5_MixReconvPlots.png" width=200> |
 | 6 | Alpha-diversity comparison | [ZebrafishMixCFUs_loperamide.Rmd](inVivoAnalysis/Mix/ZebrafishMixCFUs_loperamide.Rmd#L180) | <img src="inVivoAnalysis/Mix/Figure6_AlphaDiversity_Conv_Mix5.png" width=200> |
+
 -------------------------------------------------------------------------
 
 | Supp Fig | Description | Code | Figure |
