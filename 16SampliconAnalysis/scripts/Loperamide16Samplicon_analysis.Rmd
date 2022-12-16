@@ -657,7 +657,7 @@ abundGenusTopOnePercent <- datafullgenus %>% filter(Project=="Loperamide") %>% #
           GenusClean = sub(".*; ", "", GenusClean)) %>% 
    mutate(GenusClean = recode(GenusClean, "Gammaproteobacteria_g___g___g__"="Gammaproteobacteria_unknown",
                               "Unassigned_g___g___g___g___g__"="Unknown",
-                              "d__Bacteria_g___g___g___g___g__"="Unknown",))
+                              "d__Bacteria_g___g___g___g___g__"="Unknown"))
 
 limmagenus<- alllimmaresults %>% 
    mutate(enrich_group = factor(enrich_group, 
@@ -665,7 +665,8 @@ limmagenus<- alllimmaresults %>%
                                      "Loperamide.24h","Loperamide.48h","Loperamide.6d"),
                           labels = c("DMSO.T0", "DMSO.T1","DMSO.T5",
                                      "Loperamide.T0","Loperamide.T1","Loperamide.T5"))) %>% 
-   mutate(feature = recode(feature, "Actinobacteriota_c___o___f___g__" = "Actinobacteriota")) %>% 
+   mutate(feature = recode(feature, "Actinobacteriota_c___o___f___g__" = "Actinobacteriota",
+                              "Lachnospiraceae_ND3007_group"="Lachnospiraceae_ND3007")) %>% 
    mutate(highlighttaxa = case_when(feature %in% abundGenusTopOnePercent$GenusClean ~ ">1% abundance",
                                     TRUE ~ "low abundance")) %>% 
    mutate(featurebold = case_when(feature %in% abundGenusTopOnePercent$GenusClean ~ 
@@ -677,17 +678,15 @@ limmagenus<- alllimmaresults %>%
    facet_grid(comparison~., scales="free", space="free")+
    scale_fill_manual(values=c('#5a89b8',  '#1c5580', '#00264c', '#69fcc6','#0fc08e', '#008759'))+
    scale_color_manual(values=c("black", "transparent"), guide = "none") +
-   theme(legend.position="bottom",legend.direction = "vertical",
-         axis.text.y=element_markdown(color="grey40"),
+   theme(legend.position="top",legend.direction = "vertical",
+         axis.text.y=element_markdown(color="grey40"),legend.text = element_text(size=18), 
          panel.grid.major.x = element_line(color="gray70"),panel.grid.major.y = element_line(size=0.2))+
-   labs(fill="Enriched \ngroup", x="Log fold change", y=NULL)+ 
+   labs(fill="Enriched \ngroup", x="Log fold change", y=NULL)+
    guides(fill = guide_legend(ncol = 2,title.position = "left", hjust = 1))
 
 limmagenus
 
 ```
-
-
 
 
 
@@ -868,26 +867,10 @@ betadivplot<- ggplot(data=NMDS,aes(x,y,colour=LoperamideTimepoint,fill=Loperamid
    scale_color_manual(values=c('#5a89b8',  '#1c5580', '#00264c', '#69fcc6','#0fc08e', '#008759')) +
    scale_fill_manual(values=c('#5a89b8',  '#1c5580', '#00264c', '#69fcc6','#0fc08e', '#008759')) +
    scale_linetype_manual(values=c("solid","dotted","dashed","solid","dotted","dashed"))+
-   theme(legend.text = element_text(size=18), legend.position="bottom",
+   theme(legend.text = element_text(size=18), legend.position="top",
         legend.title = element_blank(),legend.direction="vertical", legend.key.width = unit(2,"cm"))+ 
    guides(shape = guide_legend(ncol = 2))
 betadivplot
-
-```
-
-### Summary figure with limma results
-
-```{r betadivlimma, fig.height=10, fig.width=14}
-
-betadivplot+limmagenus+
-   plot_annotation(tag_levels = "A",
-                   theme = theme(plot.title = element_text(size = 20)))+
-   plot_layout(widths=c(4,3))&
-   theme(plot.tag = element_text(face = "bold", size=20))
-
-ggsave("../figures/Figure2_LoperamideBetaAll_LimmaGenus.png", bg="transparent", width = 15, height = 10)
-ggsave("../figures/Figure2_LoperamideBetaAll_LimmaGenus.pdf", bg="transparent", width = 15, height = 10)
-ggsave("../figures/Figure2_LoperamideBetaAll_LimmaGenus.tiff", bg="transparent", width = 15, height = 10)
 
 ```
 
@@ -1050,10 +1033,59 @@ withindiss <- ggplot(braycurtisdistances, aes(x=Loperamide, y=value, fill=Lopera
    scale_y_continuous(limits=c(0,0.8), labels=c("0.00","0.25","0.50","0.75","1.00"))+
    theme(legend.position = "none", strip.background = element_rect("grey85", color="transparent"))
 
+
+
+
+braycurtisdistancessub <-
+  # calculate the dissimilarity matrix between each sample
+  vegdist(SVsLoperamidesub, method="bray", k=2) %>% as.matrix() %>% as.data.frame() %>% 
+  # Add in the sites based on the rows (paired sample)
+  rownames_to_column(var="PairedID")  %>% mutate(PairedCondition=metadataLoperamidesub$LoperamideTimepoint) %>% 
+  # Make into longform based on the columns (OG SampleID)
+  pivot_longer(cols="6-DMSO-1-1":"45-LOP-3-5", names_to="SampleID") %>% 
+  # Add in sites based on the columns (OG SampleID)
+  left_join(metadataLoperamidesub) %>% 
+  # Remove rows where a sample is paired with a sample from another condition
+  filter(PairedCondition==LoperamideTimepoint) %>% 
+  # Remove the diagonal rows, where each sample was compared to itself
+  filter(value!=0)
+
+# plot just DMSO & loperamide
+withindissdmsolop <- braycurtisdistancessub %>% filter(Loperamide!="Control water") %>% 
+   ggplot(aes(x=Loperamide, y=value, shape=Loperamide))+
+   geom_jitter(width=0.15, size=2, alpha=0.7, aes(fill=LoperamideTimepoint))+
+   geom_boxplot(alpha=0.8, aes(fill=LoperamideTimepoint))+
+   labs(x=NULL,y="within-condition dissimilarity index",fill="Condition")+
+   facet_grid(.~TimepointDay, space="free", scales="free")+
+   stat_compare_means(ref.group="DMSO", label="p.signif", label.y=0.85)+
+   scale_fill_manual(values=c('#5a89b8',  '#1c5580', '#00264c', '#69fcc6','#0fc08e', '#008759'))+
+   scale_shape_manual(values=c(24,22))+
+   scale_y_continuous(limits=c(0,1), labels=c("0.00","0.25","0.50","0.75","1.00"))+
+   theme(legend.position = "none", strip.background = element_blank())
+
 ```
 
 
-## Summary plot Beta diversity
+## Summary plot DMSO & Loperamide - Beta diversity and limma results
+
+```{r betadivlimmasummary, fig.width=15, fig.height=10}
+
+((betadivplot/withindissdmsolop + plot_layout(heights=c(3,2))) | limmagenus)+
+   plot_annotation(tag_levels = list(c("A","C","B")), 
+                   theme = theme(plot.title = element_text(size = 20)))+
+   plot_layout(widths=c(4,3)) &
+   theme(plot.tag = element_text(face = "bold", size=20))
+
+ggsave("../figures/Figure2_LoperamideBetaAll_LimmaGenus.png", bg="transparent", width = 15.5, height = 12.5)
+ggsave("../figures/Figure2_LoperamideBetaAll_LimmaGenus.pdf", bg="transparent", width = 15.5, height = 12.5)
+ggsave("../figures/Figure2_LoperamideBetaAll_LimmaGenus.tiff", bg="transparent", width = 15.5, height = 12.5)
+
+
+```
+
+
+
+## Summary plot all groups Beta diversity
 
 ```{r betasummary, fig.width=15, fig.height=25}
 
