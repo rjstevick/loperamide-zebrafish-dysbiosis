@@ -279,7 +279,7 @@ abundmono <- datamonocfus  %>% left_join(straininfo, by=c("Treatment" = "Strain"
    scale_y_continuous(trans = 'log10', expand=c(0,0),limits=c(NA,2e6),
                       labels = trans_format('log10', math_format(10^.x)))+
    scale_fill_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
-   labs(x=NULL, y="mean CFUs per strain \n(% of total CFUs per condition)", fill="Strain",
+   labs(x=NULL, y="CFUs per strain per fish", fill="Strain",
         title="Mono-reconv means as a mix")
 
 percentmono/abundmono+plot_layout(guides="collect") &
@@ -325,7 +325,7 @@ abundmix <- datacfusmix %>%
                       labels = trans_format('log10', math_format(10^.x)))+
    theme(legend.text = element_markdown(), legend.position = "right")+
    scale_fill_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
-   labs(x=NULL, y="CFUs per strain \n(% of total CFUs per fish)", fill="Strain",
+   labs(x=NULL, y="mean CFUs per strain per fish", fill="Strain",
         title="Mix-reconv means per condition/timepoint")
 
 percentmix/abundmix+plot_layout(guides="collect") &
@@ -341,14 +341,20 @@ percentmix/abundmix+plot_layout(guides="collect") &
 percentmix+percentmono+
    (abundmix+labs(title=NULL))+(abundmono+labs(title=NULL)) +
    plot_layout(guides="collect", nrow=2) + plot_annotation(tag_levels = "A") &
-   theme(legend.position='bottom',plot.title = element_text(size=30),
-         legend.text = element_markdown(size=20),
-         plot.tag = element_text(face = "bold", size=20)) & 
+   theme(legend.position='bottom',plot.title = element_text(size=34),
+         axis.text.x = element_markdown(size = 19),
+         legend.text = element_markdown(size = 30),
+         axis.text.y = element_markdown(size = 22),
+         axis.title = element_markdown(size = 30),
+         legend.title = element_markdown(size = 30),
+         plot.tag = element_text(face = "bold", size=30),
+         strip.text = element_text(size=30)) & 
    guides(fill = guide_legend(ncol = 3))
 
-ggsave("FigureS9_CompareMonoMixReconv.png", width=21, height=12, dpi=400)
-ggsave("FigureS9_CompareMonoMixReconv.pdf", width=21, height=12)
-ggsave("FigureS9_CompareMonoMixReconv.tiff", width=21, height=12)
+
+ggsave("FigureS9_CompareMonoMixReconv.png", width=26, height=16, dpi=400)
+ggsave("FigureS9_CompareMonoMixReconv.pdf", width=26, height=16)
+ggsave("FigureS9_CompareMonoMixReconv.tiff", width=26, height=16)
 
 ```
 Sum of the mono-reconv does not equal the mix-reconv.  
