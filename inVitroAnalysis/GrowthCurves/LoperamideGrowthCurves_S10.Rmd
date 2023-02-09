@@ -106,7 +106,8 @@ platemap7 <- readxl::read_xlsx("LoperamideGrowthCurves_20220523.xlsx", sheet = "
    gather(key="column", value="Sample", `1`:`12`) %>% unite(row, column, col="well", sep="") %>% 
    separate(Sample, into=c("Treatment","Strain"), sep="-", remove = FALSE) %>% drop_na(Treatment)
 
-straininfo <- readxl::read_xlsx("../../LoperamideStrainInfo.xlsx")
+straininfo <- readxl::read_xlsx("../../LoperamideStrainInfo.xlsx") %>% 
+   mutate(Strain=recode(Strain, "W6"="W6t"))
 
 ```
 
@@ -180,7 +181,7 @@ alldatanorm4567 <- alldata4567 %>% left_join(blanksclean4567) %>%
 ```{r joins}
 
 alldatanorm <- full_join(alldatanorm23, alldatanorm4567) %>% 
-   filter(Strain!="W6" & Strain !="W6l")  %>% 
+ #  filter(Strain!="W6" & Strain !="W6l")  %>% 
    inner_join(straininfo, by=c("Strain"="Strain")) %>% 
    drop_na(Strain) %>% 
    mutate(CodeName=factor(CodeName, levels=unique(straininfo$CodeName)))
@@ -202,24 +203,25 @@ alldatanorm %>% unite("AssayTreat", c(Assay, Treatment,well), remove=FALSE) %>%
    ggplot(aes(x=Time, y=valuenorm, color=Treatment))+
    stat_summary(aes(lty=Treatment, group=AssayTreat), geom="line", fun="mean", lwd=0.5, alpha=0.2) +
    stat_summary(aes(lty=Treatment), geom="line", fun="mean", lwd=1) +
-   facet_wrap(.~CodeName, scales = "free_y", ncol=3)+
+   facet_wrap(.~CodeName, scales = "free", ncol=3)+
    scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
    scale_linetype_manual(values = c("solid","dotted","dashed"))+
    guides(color = guide_legend(keywidth = unit(20, units = "mm"), 
                                override.aes = list(lwd = 1.5)))+
-   theme(strip.text = element_markdown(size = 20, face="bold"), axis.text = element_text(size=14), 
-         axis.title = element_text(size=20), 
+   theme(strip.text = element_markdown(size = 20, face="bold"), 
+         axis.text = element_text(size=16), 
+         axis.title = element_text(size=24), 
          legend.position = c(0.66,0.1), legend.background = element_blank(),
-         legend.text = element_text(size=20), legend.key.size = unit(1.2, "cm"),
+         legend.text = element_text(size=24), legend.key.size = unit(1.2, "cm"),
          panel.grid = element_blank(), panel.grid.major.y = element_blank(),
          plot.background = element_blank(),
          strip.background = element_blank(),
          panel.background = element_rect(size=1, fill="white"))+
    labs(x="Time (hours)", y="OD 600", lty = NULL, color=NULL)
 
-ggsave("FigureS7_GrowthCurvesLoperamide.png", bg = "transparent", width = 15, height=10)
-ggsave("FigureS7_GrowthCurvesLoperamide.pdf", bg = "transparent", width = 15, height=10)
-ggsave("FigureS7_GrowthCurvesLoperamide.tiff", bg = "transparent", width = 15, height=10)
+ggsave("FigureS7_GrowthCurvesLoperamide.png", bg = "transparent", width = 15, height=12)
+ggsave("FigureS7_GrowthCurvesLoperamide.pdf", bg = "transparent", width = 15, height=12)
+ggsave("FigureS7_GrowthCurvesLoperamide.tiff", bg = "transparent", width = 15, height=12)
 
 ```
 
