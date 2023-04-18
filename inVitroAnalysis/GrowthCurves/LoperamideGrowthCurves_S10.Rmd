@@ -225,6 +225,44 @@ ggsave("FigureS7_GrowthCurvesLoperamide.tiff", bg = "transparent", width = 15, h
 
 ```
 
+```{r, fig.width=20}
+
+
+alldatanorm %>% unite("AssayTreat", c(Assay, Treatment,well), remove=FALSE) %>% 
+   mutate(Time = as.numeric(Cycle)*30/60) %>% filter(Time < 20) %>% 
+   mutate(Treatment = factor(Treatment, levels=c("Control (LB or TYES)","DMSO 1:20000", "Loperamide 10 mg/L"),
+                             labels = c("Control","DMSO", "Loperamide"))) %>% 
+   filter(PaperCode %in% c("S1","S4","S5","S7","S8","S9","S10","S2")) %>% 
+   mutate(CodeName=recode(CodeName, "S7. *Aeromonas veronii 1*" = "S7. *Aeromonas veronii*")) %>% 
+   mutate(PaperName=factor(PaperName, levels=c("Pseudomonas mossellii","Variovorax gossypii",
+                                               "Achromobacter marplatensis","Stenotrophomas maltophilia",
+                                               "Aeromonas veronii","Rhizobium sp.",
+                                               "Ochrobactrum tritici","Flavobacterium johnsoniae"))) %>% 
+   ggplot(aes(x=Time, y=valuenorm, color=Treatment))+
+   stat_summary(aes(lty=Treatment, group=AssayTreat), geom="line", fun="mean", lwd=0.5, alpha=0.4) +
+   stat_summary(aes(lty=Treatment), geom="line", fun="mean", lwd=2) +
+   facet_wrap(.~PaperName, scales = "free", ncol=4)+
+   scale_color_manual(values=c('white', 'dodgerblue', '#0fc08e'))+
+   scale_linetype_manual(values = c("solid","dotted","dashed"))+
+   guides(color = guide_legend(keywidth = unit(20, units = "mm"), 
+                               override.aes = list(lwd = 1.5)))+
+   theme(legend.position="top", text=element_text(color="white", family="Avenir"),
+         plot.background = element_blank(),
+         panel.background = element_rect(fill="grey15", color="transparent"),
+         axis.text=element_text(color="white", size=16),
+         axis.title = element_text(face="bold", size=24),
+         legend.background = element_blank(),
+         legend.text = element_text(size=24), legend.key.size = unit(1.2, "cm"),
+         strip.text = element_markdown(size = 20, color="white", face="italic"), 
+         axis.ticks = element_line(color="white"), axis.line = element_line(color="white"),
+         strip.background = element_blank(),
+         panel.grid = element_blank(), panel.grid.major.y = element_blank())+
+   labs(x="Time (hours)", y="OD 600", lty = NULL, color=NULL)
+
+ggsave("FigureS7_GrowthCurvesLoperamide_bw.png", bg = "transparent", width = 18, height=7)
+
+
+```
 
 ```{r session}
 

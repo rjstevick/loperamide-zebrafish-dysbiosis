@@ -188,7 +188,7 @@ dataallCFUs %>% filter(LoperamideTreatment=="Control") %>%
 
 ```{r timelineplotall, fig.height=8, fig.width=18}
 
-statsbydayCFUsformat <- statsbydayCFUs %>% filter(p.signif!="ns")
+statsbydayCFUsformat <- statsbydayCFUs %>% filter(p.signif!="ns") %>% filter(group1=="DMSO")
 
 dataallCFUs %>% pivot_longer(Rep1:Rep3) %>%
   mutate(RepCFUs=(1000/VolPlated_ul)*DF*value) %>%
@@ -211,7 +211,11 @@ dataallCFUs %>% pivot_longer(Rep1:Rep3) %>%
   theme(strip.text = element_markdown(size = 16, face="bold"),
         panel.grid.major.x = element_line(size=0.5),
         panel.grid.minor.x = element_blank(),panel.grid.minor.y = element_blank(),
-        legend.text = element_text(size=18), legend.key.width = unit(2,"cm"))
+        legend.key.width = unit(2,"cm"),
+        axis.text.x = element_markdown(size = 22),
+         legend.text = element_markdown(size = 24),
+         axis.text.y = element_markdown(size = 22),
+         axis.title = element_markdown(size = 30))
 
 ggsave("Figure3_WaterInVitro_LoperamideCFUs.png", bg="transparent", width = 19, height = 9.5)
 ggsave("Figure3_WaterInVitro_LoperamideCFUs.tiff", bg="transparent", width = 19, height = 9.5)

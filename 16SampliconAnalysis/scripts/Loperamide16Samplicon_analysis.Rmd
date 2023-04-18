@@ -136,23 +136,28 @@ knitr::opts_chunk$set(warning=FALSE,message=FALSE)
 
 ```{r import}
 
+# read in file paths
 metadatafile <- "../metadata/Loperamide16Samplicon_metadata.txt"
 tablefile <- "../output/table.qza"
 taxonomyfile <- "../output/taxonomy.qza"
 treefile <- "../output/rooted-tree.qza"
 
+# counts table
 SVs<-read_qza(tablefile)$data
 head(SVs)[,1:5]
 
+# metadata table
 metadata<-read_q2metadata(metadatafile)  %>% 
    mutate(Loperamide=case_when(LoperamidePathogen == "DMSO 1:100" ~ "DMSO",
                                        LoperamidePathogen == "Loperamide 10mg/L" ~ "Loperamide",
                                        TRUE ~ "Control water"))
 head(metadata)[,1:5]
 
+# taxonomy table
 taxonomy<-read_qza(taxonomyfile)$data %>% parse_taxonomy()
 head(taxonomy)[,1:5]
 
+# also build phyloseq object from paths
 physeq<-qza_to_phyloseq(
     features=tablefile,
     tree=treefile,
@@ -164,7 +169,7 @@ physeq<-qza_to_phyloseq(
 
 ## Clean up data
 
-```{r summarize}
+```{r clean}
 
 metadata$LoperamideTimepoint <- factor(metadata$LoperamideTimepoint, 
                           levels = c("ControlWater.24h","ControlWater.48h","ControlWater.6d",
@@ -192,6 +197,7 @@ taxasumsclean <- select(as.data.frame(SVs), metadataLoperamide$SampleID) %>%
    rownames_to_column("ASV") %>% 
    filter(!ASV %in% eukASVs) %>% 
    column_to_rownames(var="ASV") %>% qiime2R::summarize_taxa(taxonomy) 
+
 ```
 
 ## Make data frames per rank
@@ -250,6 +256,7 @@ datafullASVs <- t(SVs) %>% as.data.frame() %>% rownames_to_column("SampleID") %>
 
 # matrix format
 metadataLoperamide <- filter(metadata, Project=="Loperamide")
+
 matrixLoperamide <- select(as.data.frame(SVs), metadataLoperamide$SampleID) %>% 
    rownames_to_column("ASV") %>% 
    filter(!ASV %in% eukASVs) %>% 
@@ -267,6 +274,7 @@ Loperamidephyseq <- phyloseq::subset_samples(physeq, Project=="Loperamide") %>%
    phyloseq::subset_taxa((Kingdom!="d__Archaea") | is.na(Kingdom)) %>% 
    phyloseq::subset_taxa((Phylum!="Cyanobacteria") | is.na(Phylum))
 
+# check number of ASVs
 length(Loperamidephyseq@tax_table)
 
 ```
@@ -446,14 +454,14 @@ mocklegend <- get_legend(mockplot+
 controlpercentlegend <- get_legend(conperc+
    guides(fill = guide_legend(ncol = 1)))
 
-plot_spacer()+conreads+mockplot+conperc+
-   mocklegend + controlpercentlegend + plot_layout(guides="collect", widths=c(1,5), heights=c(2,2,5)) +
-   plot_annotation(tag_levels = list(c("A","B","C","",""))) &
+mockplot+conperc+
+   mocklegend + controlpercentlegend + plot_layout(guides="collect", widths=c(1,5), heights=c(2,5)) +
+   plot_annotation(tag_levels = list(c("A","B","",""))) &
    theme(legend.position='none', plot.tag = element_text(face = "bold", size=20))
 
-ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.png", width=12, height=20)
-ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.pdf", width=12, height=20)
-ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.tiff", width=12, height=20)
+ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.png", width=12, height=16)
+ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.pdf", width=12, height=16)
+ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.tiff", width=12, height=16)
 
 ```
 
@@ -571,9 +579,9 @@ mG = make_comb_mat(read_setsG)
       pt_size = unit(.5, "cm"),lwd=2.5,
       comb_col = c("black","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50",
                    "grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50",
-                   "grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","maroon",
+                   "grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50",
                    "grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50",
-                   "maroon","grey50","grey50",
+                   "grey50","grey50","grey50",
                    '#5a89b8',  '#1c5580', '#00264c', '#69fcc6','#0fc08e', '#008759'),
       right_annotation = rowAnnotation(" " = anno_barplot(set_size(mG), bar_width=0.7,
                                                          axis_param = list(side = "top",labels_rot = 0),
@@ -604,7 +612,7 @@ ggsave("../figures/FigureS4_LoperamideBarsGenusUpset.tiff", width=12.5, height=1
 
 # Limma Differential Abundance
 
-At genus level - calculate differentiall abundant taxa.
+At genus level - calculate differentially abundant taxa.
 
 ```{r genuslimma, message=FALSE}
 
@@ -699,8 +707,8 @@ See ZebrafishMixCFUs_loperamide.Rmd script to generate figure 6 with mix diversi
 
 ```{r alphasimpshan, fig.width=7, fig.height=5}
 
-# calculate diversity
-diversitysimpsons<-diversity(matrixLoperamide, index="simpson")
+# calculate diversity - use percent normalized since it gives same results.
+diversitysimpsons<-diversity(matrixLoperamidePercent, index="simpson")
 # add into metadata variable
 metadataLoperamide$Simpsons<-diversitysimpsons
 
@@ -1040,7 +1048,8 @@ braycurtisdistancessub <-
   # calculate the dissimilarity matrix between each sample
   vegdist(SVsLoperamidesub, method="bray", k=2) %>% as.matrix() %>% as.data.frame() %>% 
   # Add in the sites based on the rows (paired sample)
-  rownames_to_column(var="PairedID")  %>% mutate(PairedCondition=metadataLoperamidesub$LoperamideTimepoint) %>% 
+  rownames_to_column(var="PairedID")  %>% 
+  mutate(PairedCondition=metadataLoperamidesub$LoperamideTimepoint) %>% 
   # Make into longform based on the columns (OG SampleID)
   pivot_longer(cols="6-DMSO-1-1":"45-LOP-3-5", names_to="SampleID") %>% 
   # Add in sites based on the columns (OG SampleID)
@@ -1107,7 +1116,4 @@ ggsave("../figures/FigureS5_16Sloperamide_BetaDaysAndWithinDiv.tiff", bg="transp
 
 sessionInfo()
 
-
 ```
-
-
