@@ -1,4 +1,4 @@
-# Raw data, processed data, and scripts for *Anti-diarrheal drug loperamide induces dysbiosis in zebrafish microbiota via targeted bacterial inhibition*
+# Raw data, processed data, and scripts for *Anti-diarrheal drug loperamide induces dysbiosis in zebrafish microbiota via bacterial inhibition*
 
 
 This repository contains the scripts, processed sequencing artifacts, and the Rmd script files to reproduce the figures in the manuscript. The raw sequences generated for this study can be found in the NCBI Short Read Archive under [BioProject no. PRJNA908751](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA908751). The corresponding accession numbers for each 16S rRNA amplicon sample are detailed in [`PRJNA908751_NCBI_info.xlsx`](16SampliconAnalysis/metadata/PRJNA908751_NCBI_info.xlsx).
