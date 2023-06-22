@@ -100,8 +100,62 @@ mixtotalCFUplot
 ![](ZebrafishMixCFUs_loperamide_files/figure-html/mixtotalcfus-1.png)<!-- -->
 
 
+## Abundance of each strain per fish with stats
 
-## Percent abundance of each strain per fish
+
+```r
+library(ggh4x)
+
+statsbyday <- compare_means(data=datacfusmix %>% 
+   pivot_longer(Bc1perFish:Bc10perFish) %>% 
+   mutate(name=factor(name,
+                      levels=c("Bc2perFish","Bc10perFish","Bc3perFish","Bc4perFish","Bc1perFish"),
+                      labels=c("S1. *Pseudomonas mossellii*",
+                               "S3. *Pseudomonas nitroreducens*",
+                               "S5. *Stenotrophomonas maltophila*",
+                               "S6. *Aeromonas caviae*",
+                               "S7. *Aeromonas veronii*")),
+          percent=value/CFUs_perFish), 
+   percent~LoperamideTreatment, 
+   group.by = c("Treatment","Timepoint", "name"))
+statsdatastrains <- statsbyday %>% filter(p.format<0.05 & group1=="DMSO") %>% 
+   mutate(CFUs_perFish=1, LoperamideTreatment="Loperamide")
+
+abundplot <- datacfusmix %>% 
+   pivot_longer(Bc1perFish:Bc10perFish) %>% 
+   mutate(name=factor(name,
+                      levels=c("Bc2perFish","Bc10perFish","Bc3perFish","Bc4perFish","Bc1perFish"),
+                      labels=c("S1. *Pseudomonas mossellii*",
+                               "S3. *Pseudomonas nitroreducens*",
+                               "S5. *Stenotrophomonas maltophila*",
+                               "S6. *Aeromonas caviae*",
+                               "S7. *Aeromonas veronii*")),
+          percent=value/CFUs_perFish) %>% 
+   ggplot(aes(x = LoperamideTreatment, y=percent, 
+             fill=name, shape=LoperamideTreatment))+
+   facet_wrap(.~Timepoint, nrow=1, scales="free_x")+
+   geom_point(size=2, position=position_jitterdodge(jitter.width=0.2)) +
+   geom_boxplot(alpha=0.7, show.legend = FALSE)+
+   geom_text(data=statsdatastrains, aes(label=p.signif, fill=name), size=12,
+             color=c("#847CA3", "#F4A65E", "#80792B"),
+             y=c(1,1,1), face="bold",
+             nudge_x=c(0.3,0,-0.15),
+            show.legend=FALSE)+
+   scale_fill_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
+   scale_color_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
+   scale_shape_manual(values=c(21,24,22))+
+   scale_y_continuous(labels=scales::label_percent(sale=1), limits=c(0,1.05))+
+   theme(strip.text=element_text(size=15), 
+         strip.background = element_rect(fill="grey85", color="white"),
+         legend.position="none")+
+   labs(y="% CFUs per strain per fish", x=NULL, fill="Treatment", color="Treatment", shape="Treatment")
+
+abundplot
+```
+
+![](ZebrafishMixCFUs_loperamide_files/figure-html/strainpercent-1.png)<!-- -->
+
+## Percent abundance of each fish
 
 
 ```r
@@ -118,10 +172,10 @@ percentplot <- datacfusmix %>%
                                "S7. *Aeromonas veronii*"))) %>% 
    ggplot(aes(x=as.factor(FishNum), y=value, fill=name))+
    geom_col(position="fill")+
-   facet_nested(.~Timepoint+LoperamideTreatment, space="free", scales="free")+
-   scale_y_continuous(labels=scales::label_percent(sale=1))+
+   facet_nested(.~Timepoint+LoperamideTreatment, scales="free")+
+   scale_y_continuous(labels=scales::label_percent())+
    scale_fill_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
-   labs(x=NULL, y="CFUs per strain \n(% of total CFUs per fish)", fill=NULL)+
+   labs(x=NULL, y="% CFUs per fish", fill=NULL)+
    theme(strip.text=element_text(size=15), axis.text.x = element_blank(),
          axis.ticks.x = element_blank(),
          strip.background = element_rect(fill="grey85", color="white"),
@@ -144,20 +198,31 @@ cfulegend <- get_legend(mixtotalCFUplot)
 legends <- plot_grid(cfulegend, percentlegend, ncol=1, axis = "l")
 
 ((mixtotalCFUplot+legends + plot_layout(widths=c(2,4)))  /
-      percentplot) +plot_annotation(tag_levels = list(c('A','','B')))  &
+      percentplot) /
+   abundplot+plot_annotation(tag_levels = list(c('A','','B','C')))  &
    theme(legend.position="none", plot.tag = element_text(face = "bold", size=20))
 ```
 
-![](ZebrafishMixCFUs_loperamide_files/figure-html/strainpercent-1.png)<!-- -->
+![](ZebrafishMixCFUs_loperamide_files/figure-html/strainpercentsummary-1.png)<!-- -->
 
 ```r
-ggsave("Figure5_MixReconvPlots.png", width=14.5, height=8)
-ggsave("Figure5_MixReconvPlots.pdf", width=14.5, height=8)
-ggsave("Figure5_MixReconvPlots.tiff", width=14.5, height=8)
+ggsave("Figure5_MixReconvPlots.png", width=12, height=11)
+ggsave("Figure5_MixReconvPlots.pdf", width=12, height=11)
+ggsave("Figure5_MixReconvPlots.tiff", width=12, height=11)
+
+plot_grid(percentlegend) / abundplot  + plot_layout(heights=c(1,2))
+```
+
+![](ZebrafishMixCFUs_loperamide_files/figure-html/strainpercentsummary-2.png)<!-- -->
+
+```r
+ggsave("Figure5C.png", width=12, height=5.5)
 ```
 
 
 # Alpha diversity
+
+## Simpsons
 
 
 ```r
@@ -173,7 +238,7 @@ statsSimpsonsMix <-  compare_means(data=datacfusmix,
                             group.by = c("Timepoint")) %>% 
    filter(p.format<0.05 & group1=="DMSO")
 
-mixalpha <- datacfusmix%>% 
+mixsimpson <- datacfusmix %>% 
    ggplot(aes(x=Timepoint, y=Simpsons, 
              fill=LoperamideTreatment, color=LoperamideTreatment, shape=LoperamideTreatment))+
    geom_boxplot(color="black", alpha=0.8, show.legend = FALSE)+
@@ -185,15 +250,102 @@ mixalpha <- datacfusmix%>%
    scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
    scale_y_continuous(limits=c(0,1.0), expand=c(0,0))+
    theme(legend.position = "none")+
-   labs(x=NULL, y="Simpson's Index of Diversity",fill=NULL, shape=NULL, color=NULL,
-        title="Mix gnotobiotic fish")+
+   labs(x=NULL, y="Simpson's Index",fill=NULL, shape=NULL, color=NULL,
+        title="Mix5 gnotobiotic fish")+
    theme(legend.position = "bottom", plot.title = element_text(size=20),
          panel.background = element_rect(color="grey80", size=0.8))+
    guides(color=guide_legend(override.aes = list(size=4)))
-mixalpha
+mixsimpson
 ```
 
 ![](ZebrafishMixCFUs_loperamide_files/figure-html/alphasimp-1.png)<!-- -->
+
+
+## Richness
+
+
+```r
+# calculate richness
+Smix5 <- specnumber(matrixcfusmix) 
+# add into metadata
+datacfusmix$richness <- Smix5
+
+# calculate stats
+compare_means(data=datacfusmix, 
+                            richness~LoperamideTreatment, 
+                            group.by = c("Timepoint")) %>% 
+   filter(p.format<0.05 & group1=="DMSO")
+```
+
+```
+## # A tibble: 0 × 9
+## # … with 9 variables: Timepoint <chr>, .y. <chr>, group1 <chr>, group2 <chr>,
+## #   p <dbl>, p.adj <dbl>, p.format <chr>, p.signif <chr>, method <chr>
+```
+
+```r
+mixrichness <- datacfusmix %>% 
+   ggplot(aes(x=Timepoint, y=richness, 
+             fill=LoperamideTreatment, color=LoperamideTreatment, shape=LoperamideTreatment))+
+   geom_boxplot(color="black", alpha=0.8, show.legend = FALSE)+
+   geom_point(size=2, position=position_jitterdodge(jitter.width=0.3)) +
+   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_y_continuous(limits=c(0,6), expand=c(0,0))+
+   theme(legend.position = "none")+
+   labs(x=NULL, y="Observed richness",fill=NULL, shape=NULL, color=NULL,
+        title="Mix5 gnotobiotic fish")+
+   theme(legend.position = "bottom", plot.title = element_text(size=20),
+         panel.background = element_rect(color="grey80", size=0.8))+
+   guides(color=guide_legend(override.aes = list(size=4)))
+mixrichness
+```
+
+![](ZebrafishMixCFUs_loperamide_files/figure-html/alpharich-1.png)<!-- -->
+
+## Evenness
+
+
+```r
+# calculate evenness
+Jmix5 <- microbiome::evenness(t(matrixcfusmix))
+
+# add into metadata dataframe
+datacfusmix <- Jmix5 %>% rownames_to_column("FishID") %>% 
+   left_join(datacfusmix)
+
+# stats
+compare_means(data=datacfusmix, 
+                            pielou~LoperamideTreatment, 
+                            group.by = c("Timepoint")) %>% 
+   filter(p.format<0.05 & group1=="DMSO")
+```
+
+```
+## # A tibble: 0 × 9
+## # … with 9 variables: Timepoint <chr>, .y. <chr>, group1 <chr>, group2 <chr>,
+## #   p <dbl>, p.adj <dbl>, p.format <chr>, p.signif <chr>, method <chr>
+```
+
+```r
+mixeven <- datacfusmix %>% 
+   ggplot(aes(x=Timepoint, y=pielou, 
+             fill=LoperamideTreatment, color=LoperamideTreatment, shape=LoperamideTreatment))+
+   geom_boxplot(color="black", alpha=0.8, show.legend = FALSE)+
+   geom_point(size=2, position=position_jitterdodge(jitter.width=0.3)) +
+   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_y_continuous(limits=c(0,1.0), expand=c(0,0))+
+   theme(legend.position = "none")+
+   labs(x=NULL, y="Pielou's evenness",fill=NULL, shape=NULL, color=NULL,
+        title="Mix5 gnotobiotic fish")+
+   theme(legend.position = "bottom", plot.title = element_text(size=20),
+         panel.background = element_rect(color="grey80", size=0.8))+
+   guides(color=guide_legend(override.aes = list(size=4)))
+mixeven
+```
+
+![](ZebrafishMixCFUs_loperamide_files/figure-html/alphaeven-1.png)<!-- -->
 
 ## Summary figure
 
@@ -201,15 +353,25 @@ Get conventional panel from 16S script
 
 
 ```r
-convalpha2 + mixalpha + labs(y=NULL) + 
+convalpha + mixalpha + labs(y=NULL) + 
    plot_layout(guides="collect")+plot_annotation(tag_levels = "A") & 
    theme(legend.position="bottom",plot.tag = element_text(face = "bold", size=20))
-ggsave("Figure6_AlphaDiversity_Conv_Mix5.png", bg="transparent", width = 8, height = 5)
-ggsave("Figure6_AlphaDiversity_Conv_Mix5.pdf", bg="transparent", width = 8, height = 5)
-ggsave("Figure6_AlphaDiversity_Conv_Mix5.tiff", bg="transparent", width = 8, height = 5)
 ```
 
 
+Get conventional panel from 16S script
+
+
+```r
+(convsimpson+convrichness+conveven) / 
+   (mixsimpson+mixrichness+mixeven)  + labs(y=NULL) + 
+   plot_layout(guides="collect")+plot_annotation(tag_levels = "A") & 
+   theme(legend.position="bottom",plot.tag = element_text(face = "bold", size=20))
+
+ggsave("Figure6_AlphaDiversity_Conv_Mix5.png", bg="transparent", width = 11, height = 8)
+ggsave("Figure6_AlphaDiversity_Conv_Mix5.pdf", bg="transparent", width = 8, height = 6)
+ggsave("Figure6_AlphaDiversity_Conv_Mix5.tiff", bg="transparent", width = 8, height = 5)
+```
 
 ------------------------------------------------------------------------
 
@@ -245,7 +407,7 @@ percentmono <- datamonocfus %>% left_join(straininfo, by=c("Treatment" = "Strain
    scale_y_continuous(labels=scales::label_percent())+ #limits=c(0,1e6))+ #
    scale_fill_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
    labs(x=NULL, y="mean CFUs per strain \n(% of total CFUs per condition)", fill="Strain",
-        title="Mono-reconv means as a mix")
+        title="Mono means as a mix")
 
 abundmono <- datamonocfus  %>% left_join(straininfo, by=c("Treatment" = "Strain")) %>% 
    group_by(Timepoint, LoperamideTreatment, Treatment, CodeName) %>% 
@@ -260,8 +422,8 @@ abundmono <- datamonocfus  %>% left_join(straininfo, by=c("Treatment" = "Strain"
    scale_y_continuous(trans = 'log10', expand=c(0,0),limits=c(NA,2e6),
                       labels = trans_format('log10', math_format(10^.x)))+
    scale_fill_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
-   labs(x=NULL, y="mean CFUs per strain \n(% of total CFUs per condition)", fill="Strain",
-        title="Mono-reconv means as a mix")
+   labs(x=NULL, y="CFUs per strain per fish", fill="Strain",
+        title="Mono means as a mix")
 
 percentmono/abundmono+plot_layout(guides="collect") &
   theme(legend.position='bottom')
@@ -288,7 +450,7 @@ percentmix<- datacfusmix  %>%
    scale_fill_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
    theme(legend.text = element_markdown(), legend.position = "right")+
    labs(x=NULL, y="CFUs per strain \n(% of total CFUs per fish)", fill="Strain",
-        title="Mix-reconv means per condition/timepoint")
+        title="Mix5 means per condition/timepoint")
 
 abundmix <- datacfusmix %>% 
    pivot_longer(Bc1perFish:Bc10perFish) %>% 
@@ -307,8 +469,8 @@ abundmix <- datacfusmix %>%
                       labels = trans_format('log10', math_format(10^.x)))+
    theme(legend.text = element_markdown(), legend.position = "right")+
    scale_fill_manual(values = rev(nationalparkcolors::park_palette("Saguaro", 5)))+
-   labs(x=NULL, y="CFUs per strain \n(% of total CFUs per fish)", fill="Strain",
-        title="Mix-reconv means per condition/timepoint")
+   labs(x=NULL, y="mean CFUs per strain per fish", fill="Strain",
+        title="Mix5 means per condition/timepoint")
 
 percentmix/abundmix+plot_layout(guides="collect") &
   theme(legend.position='bottom')
@@ -324,18 +486,23 @@ percentmix/abundmix+plot_layout(guides="collect") &
 percentmix+percentmono+
    (abundmix+labs(title=NULL))+(abundmono+labs(title=NULL)) +
    plot_layout(guides="collect", nrow=2) + plot_annotation(tag_levels = "A") &
-   theme(legend.position='bottom',plot.title = element_text(size=30),
-         legend.text = element_markdown(size=20),
-         plot.tag = element_text(face = "bold", size=20)) & 
+   theme(legend.position='bottom',plot.title = element_text(size=34),
+         axis.text.x = element_markdown(size = 19),
+         legend.text = element_markdown(size = 30),
+         axis.text.y = element_markdown(size = 22),
+         axis.title = element_markdown(size = 30),
+         legend.title = element_markdown(size = 30),
+         plot.tag = element_text(face = "bold", size=30),
+         strip.text = element_text(size=30)) & 
    guides(fill = guide_legend(ncol = 3))
 ```
 
 ![](ZebrafishMixCFUs_loperamide_files/figure-html/mixmonosummary-1.png)<!-- -->
 
 ```r
-ggsave("FigureS9_CompareMonoMixReconv.png", width=21, height=12, dpi=400)
-ggsave("FigureS9_CompareMonoMixReconv.pdf", width=21, height=12)
-ggsave("FigureS9_CompareMonoMixReconv.tiff", width=21, height=12)
+ggsave("FigureS9_CompareMonoMixReconv.png", width=26, height=16, dpi=400)
+ggsave("FigureS9_CompareMonoMixReconv.pdf", width=26, height=16)
+ggsave("FigureS9_CompareMonoMixReconv.tiff", width=26, height=16)
 ```
 Sum of the mono-reconv does not equal the mix-reconv.  
 Also, increased colonization for each strain in mono-reconv than when part of a mix.
