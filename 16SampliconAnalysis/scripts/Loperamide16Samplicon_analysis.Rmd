@@ -382,7 +382,7 @@ ggsave("../figures/FigureS1_16SLoperamideQC_rarecurve_reads.tiff", width=14, hei
 
 ## Controls
 
-**Expected mock community**  
+### Expected mock community
 
 ```{r mockcommunity, fig.width=8}
 
@@ -412,31 +412,80 @@ mockplot<- expectedmock %>%
 "#c45891",
 "#4b393e"))+
    scale_y_continuous(labels = scales::percent_format(), expand=c(0,0))+
-   labs(y="Expected mock species abundance",x=NULL,fill="Mock species")+ 
+   labs(y="Expected mock species abundance",x=NULL,fill="Mock species", title="Mock")+ 
    guides(fill = guide_legend(ncol = 2))
 mockplot
 
 ```
 
+### Positive controls
 
-```{r seqcontrols, fig.width=16, fig.height=20}
+```{r seqcontrolspos, fig.width=16, fig.height=20}
 
-conreads<- datafullkingdom %>% filter(Project=="Controls") %>% 
-   ggplot(aes(x=SampleName, y=value))+
-   geom_col()+
-   theme(legend.text = element_text(size=12, colour="gray20"),
-         axis.ticks.y = element_line(inherit.blank=FALSE, color="grey30"))+
-   scale_y_continuous(expand=c(0,0), labels=scales::label_comma())+
-   labs(y="Number of reads per sample",x=NULL,fill=NULL)
-
-palettess2<-c("#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", 
-              "#CAB2D6", "#6A3D9A", "#FFFF99", "#B15928","blue1","navy",
-              "maroon2","maroon4","burlywood1","burlywood4","aquamarine3","aquamarine4","grey40")
-
-conperc<- datafullASVs %>% filter(Project=="Controls") %>% 
+positivecontrols <- datafullASVs %>% filter(grepl('Mock_', SampleName)) %>% 
    left_join(read_qza(taxonomyfile)$data, by=c("ASV"="Feature.ID")) %>% 
    unite("ASVname", c("ASV", "Taxon"), sep=": \n") %>% 
-   mutate(TaxaOther=forcats::fct_lump_n(f=ASVname, w=value, other_level="Others", n=20)) %>% 
+   mutate(TaxaOther=forcats::fct_lump_n(f=ASVname, w=value, other_level="Others", n=10)) %>% 
+   mutate(TaxaOther=reorder(TaxaOther, -value)) %>%
+   group_by(SampleName) %>% mutate(percent=value/sum(value)) %>% 
+   mutate(TaxaOther=str_wrap(TaxaOther, 90)) %>% 
+   # reorder based on expected mock
+   mutate(TaxaOther=factor(TaxaOther,
+                           levels=c("94efb59163996601f8a20a8f9b0ac0d9: d__Bacteria; p__Firmicutes; c__Bacilli; o__Bacillales;\nf__Bacillaceae; g__Bacillus",
+                                    "b08e8a180eba5a20a70b190fbf5f9ad2: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria;\no__Enterobacterales; f__Enterobacteriaceae",
+                                    "fdaab5e761766ddd1297bd5f49d1cfb3: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria;\no__Enterobacterales",
+                                    "f0090fc348a4c45135f858d776e30dd0: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Lactobacillales; f__Lactobacillaceae; g__Lactobacillus",
+                                    "456f366888eac2ce0809986d3ed1b237: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Lactobacillales",
+                                    "d02f4c8904ba636c08bbdf8b65b5d7d0: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Lactobacillales; f__Listeriaceae; g__Listeria",
+                                    "d3962c483c45f0765b9b7656ec7f43a0: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria",
+                                    "3019073bed0ceecaece9f446607c003a: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria;\no__Enterobacterales; f__Enterobacteriaceae; g__Salmonella",
+                                    "f9eed79f2bd69b0da2385144b13658a7: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Staphylococcales; f__Staphylococcaceae",
+                                    "5c9b89d5acf8e0020d9de19b53d21663: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Staphylococcales; f__Staphylococcaceae; g__Staphylococcus",
+                                    "Others")))
+
+
+# make palette based on expected mock
+pospalettess2<- positivecontrols %>% 
+   mutate(colorpal = case_when(grepl("fdaab5e761766ddd1297bd5f49d1cfb3",TaxaOther) ~"#9cd250",
+                               grepl("Salmonella",TaxaOther) ~ "#c45891",
+                               grepl("b08", TaxaOther) ~ "#b8995a",
+                               grepl("d39",TaxaOther) ~ "#7e4abb",
+                               grepl("Staphylococcaceae",TaxaOther) ~ "#4b393e",
+                               grepl("Listeria",TaxaOther) ~"#8c9fc3",
+                               grepl("Lactobacillales",TaxaOther) ~ "#6eb386",
+                               grepl("Bacillus",TaxaOther) ~ "#c5543a",
+                               TaxaOther=="Others" ~ "grey40"))
+
+colors <- distinct(pospalettess2, TaxaOther, colorpal)
+pal <- colors$colorpal
+names(pal) <- colors$TaxaOther
+pal
+
+
+posconperc <- positivecontrols %>% 
+   ggplot(aes(x=SampleName, y=percent, fill=TaxaOther))+
+   geom_col(position="fill", alpha=0.8)+
+   theme(legend.text = element_text(size=12, colour="gray20", margin = margin(b = 10, unit = "pt")),
+         legend.position = "right",legend.direction = "vertical",
+         axis.ticks.y = element_line(inherit.blank=FALSE, color="grey30")) +
+   scale_fill_manual(values=pal) +
+   scale_y_continuous(labels = scales::percent_format(), expand=c(0,0))+
+   labs(y="Percent ASV abundance",x=NULL,fill="Positive control ASV", title="Positive")
+posconperc
+
+```
+
+### Negative controls
+
+```{r seqcontrolsneg, fig.width=16, fig.height=20}
+
+negpalettess2<-c("#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", 
+              "#CAB2D6", "#6A3D9A","grey40")
+
+negconperc<- datafullASVs %>% filter(grepl('Neg_', SampleName)) %>% 
+   left_join(read_qza(taxonomyfile)$data, by=c("ASV"="Feature.ID")) %>% 
+   unite("ASVname", c("ASV", "Taxon"), sep=": \n") %>% 
+   mutate(TaxaOther=forcats::fct_lump_n(f=ASVname, w=value, other_level="Others", n=10)) %>% 
    mutate(TaxaOther=reorder(TaxaOther, -value)) %>%
    group_by(SampleName) %>% mutate(percent=value/sum(value)) %>%  
    ggplot(aes(x=SampleName, y=percent, fill=str_wrap(TaxaOther, 90)))+
@@ -444,24 +493,37 @@ conperc<- datafullASVs %>% filter(Project=="Controls") %>%
    theme(legend.text = element_text(size=12, colour="gray20", margin = margin(b = 10, unit = "pt")),
          legend.position = "right",legend.direction = "vertical",
          axis.ticks.y = element_line(inherit.blank=FALSE, color="grey30"))+
-   scale_fill_manual(values=c(palettess2))+
+   scale_fill_manual(values=c(negpalettess2))+
    scale_y_continuous(labels = scales::percent_format(), expand=c(0,0))+
-   labs(y="Percent ASV abundance",x=NULL,fill="ASV")
+   labs(y="Percent ASV abundance",x=NULL,fill="Negative Control ASV", title="Negative")
+negconperc
 
+```
+
+
+```{r seconsummary, fig.width=13, fig.height=17}
 
 mocklegend <- get_legend(mockplot+
    guides(fill = guide_legend(ncol = 1)))
-controlpercentlegend <- get_legend(conperc+
+poscontrolpercentlegend <- get_legend(posconperc+
+   guides(fill = guide_legend(ncol = 1)))
+negcontrolpercentlegend <- get_legend(negconperc+
    guides(fill = guide_legend(ncol = 1)))
 
-mockplot+conperc+
-   mocklegend + controlpercentlegend + plot_layout(guides="collect", widths=c(1,5), heights=c(2,5)) +
-   plot_annotation(tag_levels = list(c("A","B","",""))) &
-   theme(legend.position='none', plot.tag = element_text(face = "bold", size=20))
+library(cowplot)
+controllegends<- plot_grid(poscontrolpercentlegend, negcontrolpercentlegend, nrow=2)
 
-ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.png", width=12, height=16)
-ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.pdf", width=12, height=16)
-ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.tiff", width=12, height=16)
+plots <- mockplot+
+   guides(fill = guide_legend(ncol = 1))+posconperc+theme(legend.position='none')+negconperc+theme(legend.position='none') + plot_layout(widths=c(1,2,3), nrow=1) +
+   plot_annotation(tag_levels = list(c("A","B","C")) )&
+   theme(plot.tag = element_text(face = "bold", size=20),
+         plot.title = element_text(face = "bold", size=20))
+
+plot_grid(plots, controllegends, nrow=2, axis="l", rel_heights = c(2,4))
+
+ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.png", width=13, height=17)
+ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.pdf", width=13, height=17)
+ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.tiff", width=13, height=17)
 
 ```
 
@@ -700,14 +762,15 @@ limmagenus
 
 -----
 
-# Alpha Diversity - Simpsons
+# Alpha Diversity
 
 See ZebrafishMixCFUs_loperamide.Rmd script to generate figure 6 with mix diversity.  
 
+## Simpsons
 
 ```{r alphasimpshan, fig.width=7, fig.height=5}
 
-# calculate diversity - use percent normalized since it gives same results.
+# calculate diversity
 diversitysimpsons<-diversity(matrixLoperamidePercent, index="simpson")
 # add into metadata variable
 metadataLoperamide$Simpsons<-diversitysimpsons
@@ -717,8 +780,9 @@ statsSimpsons <- compare_means(data=metadataLoperamide,
                             Simpsons~Loperamide, 
                             group.by = c("TimepointDay")) %>% 
    filter(p.format<0.05 & group1=="DMSO")
+statsSimpsons
 
-convalpha <- metadataLoperamide %>% filter(Project=="Loperamide") %>% 
+convsimpson <- metadataLoperamide %>% filter(Project=="Loperamide") %>% 
    mutate(Loperamide=factor(Loperamide, levels=c("Control water", "DMSO", "Loperamide"),
                             labels=c("Control", "DMSO", "Loperamide"))) %>% 
    ggplot(aes(x=TimepointDay, y=Simpsons, 
@@ -732,17 +796,98 @@ convalpha <- metadataLoperamide %>% filter(Project=="Loperamide") %>%
    scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
    scale_y_continuous(limits=c(0,1.0), expand=c(0,0))+
    theme(legend.position = "none")+
-   labs(x=NULL, y="Simpson's Index of Diversity",fill=NULL, shape=NULL, color=NULL,
+   labs(x=NULL, y="Simpson's Index",fill=NULL, shape=NULL, color=NULL,
         title="Conventional fish")+
    theme(legend.position = "bottom", plot.title = element_text(size=20),
          panel.background = element_rect(color="grey80", size=0.8))+
    guides(color=guide_legend(override.aes = list(size=4)))
 
-convalpha
+convsimpson
 
 ```
 
+## Richness
 
+```{r alpharichness, fig.width=7, fig.height=5}
+
+# calculate richness
+Sconv <- specnumber(matrixLoperamidePercent)
+# add into metadata dataframe
+metadataLoperamide$richness <- Sconv
+
+# calculate stats
+statsRichness <- compare_means(data=metadataLoperamide, 
+                            richness~Loperamide, 
+                            group.by = c("TimepointDay")) %>% 
+   filter(p.format<0.05 & group1=="DMSO")
+statsRichness
+
+# plot
+convrichness <- metadataLoperamide %>% filter(Project=="Loperamide") %>% 
+   mutate(Loperamide=factor(Loperamide, levels=c("Control water", "DMSO", "Loperamide"),
+                            labels=c("Control", "DMSO", "Loperamide"))) %>% 
+   ggplot(aes(x=TimepointDay, y=richness, 
+             fill=Loperamide, color=Loperamide, shape=Loperamide))+
+   geom_boxplot(color="black", alpha=0.8, show.legend = FALSE)+
+   geom_point(size=2, position=position_jitterdodge(jitter.width=0.25)) +
+   geom_text(data=statsRichness, aes(label="*", x=TimepointDay, 
+                                        y=0.9, fill=NA, shape=NA), 
+             size=9, color="#0fc08e", show.legend=FALSE, nudge_x=.3)+
+   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_y_continuous(limits=c(0,max(Sconv)+100), expand=c(0,0))+
+   theme(legend.position = "none")+
+   labs(x=NULL, y="Observed richness",fill=NULL, shape=NULL, color=NULL,
+        title="Conventional fish")+
+   theme(legend.position = "bottom", plot.title = element_text(size=20),
+         panel.background = element_rect(color="grey80", size=0.8))+
+   guides(color=guide_legend(override.aes = list(size=4)))
+
+convrichness
+
+```
+
+## Evenness
+
+```{r alphaeven, fig.width=7, fig.height=5}
+
+# calculate evenness
+Jconv <- microbiome::evenness(t(matrixLoperamidePercent))
+
+# add into metadata dataframe
+metadataLoperamide <- Jconv %>% rownames_to_column("SampleID") %>% 
+   left_join(metadataLoperamide)
+
+# stats
+statsEvenness <- compare_means(data=metadataLoperamide, 
+                            pielou~Loperamide, 
+                            group.by = c("TimepointDay")) %>% 
+   filter(p.format<0.05 & group1=="DMSO")
+statsEvenness
+
+conveven <- metadataLoperamide %>% filter(Project=="Loperamide") %>% 
+   mutate(Loperamide=factor(Loperamide, levels=c("Control water", "DMSO", "Loperamide"),
+                            labels=c("Control", "DMSO", "Loperamide"))) %>% 
+   ggplot(aes(x=TimepointDay, y=pielou, 
+             fill=Loperamide, color=Loperamide, shape=Loperamide))+
+   geom_boxplot(color="black", alpha=0.8, show.legend = FALSE)+
+   geom_point(size=2, position=position_jitterdodge(jitter.width=0.25)) +
+   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_y_continuous(limits=c(0,1), expand=c(0,0))+
+   geom_text(data=statsEvenness, aes(label="*", x=TimepointDay, 
+                                        y=0.9, fill=NA, shape=NA), 
+             size=9, color="#0fc08e", show.legend=FALSE, nudge_x=.3)+
+   theme(legend.position = "none")+
+   labs(x=NULL, y="Pielou's evenness",fill=NULL, shape=NULL, color=NULL,
+        title="Conventional fish")+
+   theme(legend.position = "bottom", plot.title = element_text(size=20),
+         panel.background = element_rect(color="grey80", size=0.8))+
+   guides(color=guide_legend(override.aes = list(size=4)))
+
+conveven
+
+```
 
 # Beta Diversity
 

@@ -136,11 +136,13 @@ knitr::opts_chunk$set(warning=FALSE,message=FALSE)
 
 
 ```r
+# read in file paths
 metadatafile <- "../metadata/Loperamide16Samplicon_metadata.txt"
 tablefile <- "../output/table.qza"
 taxonomyfile <- "../output/taxonomy.qza"
 treefile <- "../output/rooted-tree.qza"
 
+# counts table
 SVs<-read_qza(tablefile)$data
 head(SVs)[,1:5]
 ```
@@ -163,6 +165,7 @@ head(SVs)[,1:5]
 ```
 
 ```r
+# metadata table
 metadata<-read_q2metadata(metadatafile)  %>% 
    mutate(Loperamide=case_when(LoperamidePathogen == "DMSO 1:100" ~ "DMSO",
                                        LoperamidePathogen == "Loperamide 10mg/L" ~ "Loperamide",
@@ -181,6 +184,7 @@ head(metadata)[,1:5]
 ```
 
 ```r
+# taxonomy table
 taxonomy<-read_qza(taxonomyfile)$data %>% parse_taxonomy()
 head(taxonomy)[,1:5]
 ```
@@ -210,6 +214,7 @@ head(taxonomy)[,1:5]
 ```
 
 ```r
+# also build phyloseq object from paths
 physeq<-qza_to_phyloseq(
     features=tablefile,
     tree=treefile,
@@ -306,6 +311,7 @@ datafullASVs <- t(SVs) %>% as.data.frame() %>% rownames_to_column("SampleID") %>
 ```r
 # matrix format
 metadataLoperamide <- filter(metadata, Project=="Loperamide")
+
 matrixLoperamide <- select(as.data.frame(SVs), metadataLoperamide$SampleID) %>% 
    rownames_to_column("ASV") %>% 
    filter(!ASV %in% eukASVs) %>% 
@@ -323,6 +329,7 @@ Loperamidephyseq <- phyloseq::subset_samples(physeq, Project=="Loperamide") %>%
    phyloseq::subset_taxa((Kingdom!="d__Archaea") | is.na(Kingdom)) %>% 
    phyloseq::subset_taxa((Phylum!="Cyanobacteria") | is.na(Phylum))
 
+# check number of ASVs
 length(Loperamidephyseq@tax_table)
 ```
 
@@ -490,7 +497,7 @@ ggsave("../figures/FigureS1_16SLoperamideQC_rarecurve_reads.tiff", width=14, hei
 
 ## Controls
 
-**Expected mock community**  
+### Expected mock community
 
 
 ```r
@@ -520,32 +527,130 @@ mockplot<- expectedmock %>%
 "#c45891",
 "#4b393e"))+
    scale_y_continuous(labels = scales::percent_format(), expand=c(0,0))+
-   labs(y="Expected mock species abundance",x=NULL,fill="Mock species")+ 
+   labs(y="Expected mock species abundance",x=NULL,fill="Mock species", title="Mock")+ 
    guides(fill = guide_legend(ncol = 2))
 mockplot
 ```
 
 ![](Loperamide16Samplicon_analysis_files/figure-html/mockcommunity-1.png)<!-- -->
 
+### Positive controls
 
 
 ```r
-conreads<- datafullkingdom %>% filter(Project=="Controls") %>% 
-   ggplot(aes(x=SampleName, y=value))+
-   geom_col()+
-   theme(legend.text = element_text(size=12, colour="gray20"),
-         axis.ticks.y = element_line(inherit.blank=FALSE, color="grey30"))+
-   scale_y_continuous(expand=c(0,0), labels=scales::label_comma())+
-   labs(y="Number of reads per sample",x=NULL,fill=NULL)
-
-palettess2<-c("#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", 
-              "#CAB2D6", "#6A3D9A", "#FFFF99", "#B15928","blue1","navy",
-              "maroon2","maroon4","burlywood1","burlywood4","aquamarine3","aquamarine4","grey40")
-
-conperc<- datafullASVs %>% filter(Project=="Controls") %>% 
+positivecontrols <- datafullASVs %>% filter(grepl('Mock_', SampleName)) %>% 
    left_join(read_qza(taxonomyfile)$data, by=c("ASV"="Feature.ID")) %>% 
    unite("ASVname", c("ASV", "Taxon"), sep=": \n") %>% 
-   mutate(TaxaOther=forcats::fct_lump_n(f=ASVname, w=value, other_level="Others", n=20)) %>% 
+   mutate(TaxaOther=forcats::fct_lump_n(f=ASVname, w=value, other_level="Others", n=10)) %>% 
+   mutate(TaxaOther=reorder(TaxaOther, -value)) %>%
+   group_by(SampleName) %>% mutate(percent=value/sum(value)) %>% 
+   mutate(TaxaOther=str_wrap(TaxaOther, 90)) %>% 
+   # reorder based on expected mock
+   mutate(TaxaOther=factor(TaxaOther,
+                           levels=c("94efb59163996601f8a20a8f9b0ac0d9: d__Bacteria; p__Firmicutes; c__Bacilli; o__Bacillales;\nf__Bacillaceae; g__Bacillus",
+                                    "b08e8a180eba5a20a70b190fbf5f9ad2: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria;\no__Enterobacterales; f__Enterobacteriaceae",
+                                    "fdaab5e761766ddd1297bd5f49d1cfb3: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria;\no__Enterobacterales",
+                                    "f0090fc348a4c45135f858d776e30dd0: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Lactobacillales; f__Lactobacillaceae; g__Lactobacillus",
+                                    "456f366888eac2ce0809986d3ed1b237: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Lactobacillales",
+                                    "d02f4c8904ba636c08bbdf8b65b5d7d0: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Lactobacillales; f__Listeriaceae; g__Listeria",
+                                    "d3962c483c45f0765b9b7656ec7f43a0: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria",
+                                    "3019073bed0ceecaece9f446607c003a: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria;\no__Enterobacterales; f__Enterobacteriaceae; g__Salmonella",
+                                    "f9eed79f2bd69b0da2385144b13658a7: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Staphylococcales; f__Staphylococcaceae",
+                                    "5c9b89d5acf8e0020d9de19b53d21663: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Staphylococcales; f__Staphylococcaceae; g__Staphylococcus",
+                                    "Others")))
+
+
+# make palette based on expected mock
+pospalettess2<- positivecontrols %>% 
+   mutate(colorpal = case_when(grepl("fdaab5e761766ddd1297bd5f49d1cfb3",TaxaOther) ~"#9cd250",
+                               grepl("Salmonella",TaxaOther) ~ "#c45891",
+                               grepl("b08", TaxaOther) ~ "#b8995a",
+                               grepl("d39",TaxaOther) ~ "#7e4abb",
+                               grepl("Staphylococcaceae",TaxaOther) ~ "#4b393e",
+                               grepl("Listeria",TaxaOther) ~"#8c9fc3",
+                               grepl("Lactobacillales",TaxaOther) ~ "#6eb386",
+                               grepl("Bacillus",TaxaOther) ~ "#c5543a",
+                               TaxaOther=="Others" ~ "grey40"))
+
+colors <- distinct(pospalettess2, TaxaOther, colorpal)
+pal <- colors$colorpal
+names(pal) <- colors$TaxaOther
+pal
+```
+
+```
+##                                                                                                                                               Others 
+##                                                                                                                                             "grey40" 
+##                                                             d3962c483c45f0765b9b7656ec7f43a0: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria 
+##                                                                                                                                            "#7e4abb" 
+##                b08e8a180eba5a20a70b190fbf5f9ad2: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria;\no__Enterobacterales; f__Enterobacteriaceae 
+##                                                                                                                                            "#b8995a" 
+##                                 f9eed79f2bd69b0da2385144b13658a7: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Staphylococcales; f__Staphylococcaceae 
+##                                                                                                                                            "#4b393e" 
+##                                94efb59163996601f8a20a8f9b0ac0d9: d__Bacteria; p__Firmicutes; c__Bacilli; o__Bacillales;\nf__Bacillaceae; g__Bacillus 
+##                                                                                                                                            "#c5543a" 
+##                          d02f4c8904ba636c08bbdf8b65b5d7d0: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Lactobacillales; f__Listeriaceae; g__Listeria 
+##                                                                                                                                            "#8c9fc3" 
+##                                       fdaab5e761766ddd1297bd5f49d1cfb3: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria;\no__Enterobacterales 
+##                                                                                                                                            "#9cd250" 
+##                 f0090fc348a4c45135f858d776e30dd0: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Lactobacillales; f__Lactobacillaceae; g__Lactobacillus 
+##                                                                                                                                            "#6eb386" 
+##                                                        456f366888eac2ce0809986d3ed1b237: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Lactobacillales 
+##                                                                                                                                            "#6eb386" 
+## 3019073bed0ceecaece9f446607c003a: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria;\no__Enterobacterales; f__Enterobacteriaceae; g__Salmonella 
+##                                                                                                                                            "#c45891" 
+##              5c9b89d5acf8e0020d9de19b53d21663: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Staphylococcales; f__Staphylococcaceae; g__Staphylococcus 
+##                                                                                                                                            "#4b393e" 
+##                                                                                                                                               Others 
+##                                                                                                                                             "grey40" 
+##                                                             d3962c483c45f0765b9b7656ec7f43a0: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria 
+##                                                                                                                                            "#7e4abb" 
+##                b08e8a180eba5a20a70b190fbf5f9ad2: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria;\no__Enterobacterales; f__Enterobacteriaceae 
+##                                                                                                                                            "#b8995a" 
+##                                 f9eed79f2bd69b0da2385144b13658a7: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Staphylococcales; f__Staphylococcaceae 
+##                                                                                                                                            "#4b393e" 
+##                                94efb59163996601f8a20a8f9b0ac0d9: d__Bacteria; p__Firmicutes; c__Bacilli; o__Bacillales;\nf__Bacillaceae; g__Bacillus 
+##                                                                                                                                            "#c5543a" 
+##                          d02f4c8904ba636c08bbdf8b65b5d7d0: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Lactobacillales; f__Listeriaceae; g__Listeria 
+##                                                                                                                                            "#8c9fc3" 
+##                                       fdaab5e761766ddd1297bd5f49d1cfb3: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria;\no__Enterobacterales 
+##                                                                                                                                            "#9cd250" 
+##                 f0090fc348a4c45135f858d776e30dd0: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Lactobacillales; f__Lactobacillaceae; g__Lactobacillus 
+##                                                                                                                                            "#6eb386" 
+##                                                        456f366888eac2ce0809986d3ed1b237: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Lactobacillales 
+##                                                                                                                                            "#6eb386" 
+## 3019073bed0ceecaece9f446607c003a: d__Bacteria; p__Proteobacteria; c__Gammaproteobacteria;\no__Enterobacterales; f__Enterobacteriaceae; g__Salmonella 
+##                                                                                                                                            "#c45891" 
+##              5c9b89d5acf8e0020d9de19b53d21663: d__Bacteria; p__Firmicutes; c__Bacilli;\no__Staphylococcales; f__Staphylococcaceae; g__Staphylococcus 
+##                                                                                                                                            "#4b393e"
+```
+
+```r
+posconperc <- positivecontrols %>% 
+   ggplot(aes(x=SampleName, y=percent, fill=TaxaOther))+
+   geom_col(position="fill", alpha=0.8)+
+   theme(legend.text = element_text(size=12, colour="gray20", margin = margin(b = 10, unit = "pt")),
+         legend.position = "right",legend.direction = "vertical",
+         axis.ticks.y = element_line(inherit.blank=FALSE, color="grey30")) +
+   scale_fill_manual(values=pal) +
+   scale_y_continuous(labels = scales::percent_format(), expand=c(0,0))+
+   labs(y="Percent ASV abundance",x=NULL,fill="Positive control ASV", title="Positive")
+posconperc
+```
+
+![](Loperamide16Samplicon_analysis_files/figure-html/seqcontrolspos-1.png)<!-- -->
+
+### Negative controls
+
+
+```r
+negpalettess2<-c("#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", 
+              "#CAB2D6", "#6A3D9A","grey40")
+
+negconperc<- datafullASVs %>% filter(grepl('Neg_', SampleName)) %>% 
+   left_join(read_qza(taxonomyfile)$data, by=c("ASV"="Feature.ID")) %>% 
+   unite("ASVname", c("ASV", "Taxon"), sep=": \n") %>% 
+   mutate(TaxaOther=forcats::fct_lump_n(f=ASVname, w=value, other_level="Others", n=10)) %>% 
    mutate(TaxaOther=reorder(TaxaOther, -value)) %>%
    group_by(SampleName) %>% mutate(percent=value/sum(value)) %>%  
    ggplot(aes(x=SampleName, y=percent, fill=str_wrap(TaxaOther, 90)))+
@@ -553,28 +658,42 @@ conperc<- datafullASVs %>% filter(Project=="Controls") %>%
    theme(legend.text = element_text(size=12, colour="gray20", margin = margin(b = 10, unit = "pt")),
          legend.position = "right",legend.direction = "vertical",
          axis.ticks.y = element_line(inherit.blank=FALSE, color="grey30"))+
-   scale_fill_manual(values=c(palettess2))+
+   scale_fill_manual(values=c(negpalettess2))+
    scale_y_continuous(labels = scales::percent_format(), expand=c(0,0))+
-   labs(y="Percent ASV abundance",x=NULL,fill="ASV")
-
-
-mocklegend <- get_legend(mockplot+
-   guides(fill = guide_legend(ncol = 1)))
-controlpercentlegend <- get_legend(conperc+
-   guides(fill = guide_legend(ncol = 1)))
-
-plot_spacer()+conreads+mockplot+conperc+
-   mocklegend + controlpercentlegend + plot_layout(guides="collect", widths=c(1,5), heights=c(2,2,5)) +
-   plot_annotation(tag_levels = list(c("A","B","C","",""))) &
-   theme(legend.position='none', plot.tag = element_text(face = "bold", size=20))
+   labs(y="Percent ASV abundance",x=NULL,fill="Negative Control ASV", title="Negative")
+negconperc
 ```
 
-![](Loperamide16Samplicon_analysis_files/figure-html/seqcontrols-1.png)<!-- -->
+![](Loperamide16Samplicon_analysis_files/figure-html/seqcontrolsneg-1.png)<!-- -->
+
+
 
 ```r
-ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.png", width=12, height=20)
-ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.pdf", width=12, height=20)
-ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.tiff", width=12, height=20)
+mocklegend <- get_legend(mockplot+
+   guides(fill = guide_legend(ncol = 1)))
+poscontrolpercentlegend <- get_legend(posconperc+
+   guides(fill = guide_legend(ncol = 1)))
+negcontrolpercentlegend <- get_legend(negconperc+
+   guides(fill = guide_legend(ncol = 1)))
+
+library(cowplot)
+controllegends<- plot_grid(poscontrolpercentlegend, negcontrolpercentlegend, nrow=2)
+
+plots <- mockplot+
+   guides(fill = guide_legend(ncol = 1))+posconperc+theme(legend.position='none')+negconperc+theme(legend.position='none') + plot_layout(widths=c(1,2,3), nrow=1) +
+   plot_annotation(tag_levels = list(c("A","B","C")) )&
+   theme(plot.tag = element_text(face = "bold", size=20),
+         plot.title = element_text(face = "bold", size=20))
+
+plot_grid(plots, controllegends, nrow=2, axis="l", rel_heights = c(2,4))
+```
+
+![](Loperamide16Samplicon_analysis_files/figure-html/seconsummary-1.png)<!-- -->
+
+```r
+ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.png", width=13, height=17)
+ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.pdf", width=13, height=17)
+ggsave("../figures/FigureS2_LoperamideQC_mocknegativecontrols.tiff", width=13, height=17)
 ```
 
 
@@ -621,12 +740,12 @@ datafullphylum  %>%
 ```
 
 ```{=html}
-<div id="ciqnxlijoc" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="awwroxifdg" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#ciqnxlijoc .gt_table {
+#awwroxifdg .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -651,7 +770,7 @@ datafullphylum  %>%
   border-left-color: #D3D3D3;
 }
 
-#ciqnxlijoc .gt_heading {
+#awwroxifdg .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -663,7 +782,12 @@ datafullphylum  %>%
   border-right-color: #D3D3D3;
 }
 
-#ciqnxlijoc .gt_title {
+#awwroxifdg .gt_caption {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+#awwroxifdg .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -675,7 +799,7 @@ datafullphylum  %>%
   border-bottom-width: 0;
 }
 
-#ciqnxlijoc .gt_subtitle {
+#awwroxifdg .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -687,13 +811,13 @@ datafullphylum  %>%
   border-top-width: 0;
 }
 
-#ciqnxlijoc .gt_bottom_border {
+#awwroxifdg .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#ciqnxlijoc .gt_col_headings {
+#awwroxifdg .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -708,7 +832,7 @@ datafullphylum  %>%
   border-right-color: #D3D3D3;
 }
 
-#ciqnxlijoc .gt_col_heading {
+#awwroxifdg .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -728,7 +852,7 @@ datafullphylum  %>%
   overflow-x: hidden;
 }
 
-#ciqnxlijoc .gt_column_spanner_outer {
+#awwroxifdg .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -740,15 +864,15 @@ datafullphylum  %>%
   padding-right: 4px;
 }
 
-#ciqnxlijoc .gt_column_spanner_outer:first-child {
+#awwroxifdg .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#ciqnxlijoc .gt_column_spanner_outer:last-child {
+#awwroxifdg .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#ciqnxlijoc .gt_column_spanner {
+#awwroxifdg .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -760,7 +884,7 @@ datafullphylum  %>%
   width: 100%;
 }
 
-#ciqnxlijoc .gt_group_heading {
+#awwroxifdg .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -783,9 +907,10 @@ datafullphylum  %>%
   border-right-width: 1px;
   border-right-color: #D3D3D3;
   vertical-align: middle;
+  text-align: left;
 }
 
-#ciqnxlijoc .gt_empty_group_heading {
+#awwroxifdg .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -800,15 +925,15 @@ datafullphylum  %>%
   vertical-align: middle;
 }
 
-#ciqnxlijoc .gt_from_md > :first-child {
+#awwroxifdg .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#ciqnxlijoc .gt_from_md > :last-child {
+#awwroxifdg .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#ciqnxlijoc .gt_row {
+#awwroxifdg .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -827,7 +952,7 @@ datafullphylum  %>%
   overflow-x: hidden;
 }
 
-#ciqnxlijoc .gt_stub {
+#awwroxifdg .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -840,7 +965,7 @@ datafullphylum  %>%
   padding-right: 5px;
 }
 
-#ciqnxlijoc .gt_stub_row_group {
+#awwroxifdg .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -854,11 +979,11 @@ datafullphylum  %>%
   vertical-align: top;
 }
 
-#ciqnxlijoc .gt_row_group_first td {
+#awwroxifdg .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#ciqnxlijoc .gt_summary_row {
+#awwroxifdg .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -868,16 +993,16 @@ datafullphylum  %>%
   padding-right: 5px;
 }
 
-#ciqnxlijoc .gt_first_summary_row {
+#awwroxifdg .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#ciqnxlijoc .gt_first_summary_row.thick {
+#awwroxifdg .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#ciqnxlijoc .gt_last_summary_row {
+#awwroxifdg .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -887,7 +1012,7 @@ datafullphylum  %>%
   border-bottom-color: #D3D3D3;
 }
 
-#ciqnxlijoc .gt_grand_summary_row {
+#awwroxifdg .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -897,7 +1022,7 @@ datafullphylum  %>%
   padding-right: 5px;
 }
 
-#ciqnxlijoc .gt_first_grand_summary_row {
+#awwroxifdg .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -907,11 +1032,11 @@ datafullphylum  %>%
   border-top-color: #D3D3D3;
 }
 
-#ciqnxlijoc .gt_striped {
+#awwroxifdg .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#ciqnxlijoc .gt_table_body {
+#awwroxifdg .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -920,7 +1045,7 @@ datafullphylum  %>%
   border-bottom-color: #D3D3D3;
 }
 
-#ciqnxlijoc .gt_footnotes {
+#awwroxifdg .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -934,7 +1059,7 @@ datafullphylum  %>%
   border-right-color: #D3D3D3;
 }
 
-#ciqnxlijoc .gt_footnote {
+#awwroxifdg .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-left: 4px;
@@ -943,7 +1068,7 @@ datafullphylum  %>%
   padding-right: 5px;
 }
 
-#ciqnxlijoc .gt_sourcenotes {
+#awwroxifdg .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -957,7 +1082,7 @@ datafullphylum  %>%
   border-right-color: #D3D3D3;
 }
 
-#ciqnxlijoc .gt_sourcenote {
+#awwroxifdg .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -965,111 +1090,113 @@ datafullphylum  %>%
   padding-right: 5px;
 }
 
-#ciqnxlijoc .gt_left {
+#awwroxifdg .gt_left {
   text-align: left;
 }
 
-#ciqnxlijoc .gt_center {
+#awwroxifdg .gt_center {
   text-align: center;
 }
 
-#ciqnxlijoc .gt_right {
+#awwroxifdg .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#ciqnxlijoc .gt_font_normal {
+#awwroxifdg .gt_font_normal {
   font-weight: normal;
 }
 
-#ciqnxlijoc .gt_font_bold {
+#awwroxifdg .gt_font_bold {
   font-weight: bold;
 }
 
-#ciqnxlijoc .gt_font_italic {
+#awwroxifdg .gt_font_italic {
   font-style: italic;
 }
 
-#ciqnxlijoc .gt_super {
+#awwroxifdg .gt_super {
   font-size: 65%;
 }
 
-#ciqnxlijoc .gt_footnote_marks {
+#awwroxifdg .gt_footnote_marks {
   font-style: italic;
   font-weight: normal;
   font-size: 75%;
   vertical-align: 0.4em;
 }
 
-#ciqnxlijoc .gt_asterisk {
+#awwroxifdg .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#ciqnxlijoc .gt_slash_mark {
-  font-size: 0.7em;
-  line-height: 0.7em;
-  vertical-align: 0.15em;
+#awwroxifdg .gt_indent_1 {
+  text-indent: 5px;
 }
 
-#ciqnxlijoc .gt_fraction_numerator {
-  font-size: 0.6em;
-  line-height: 0.6em;
-  vertical-align: 0.45em;
+#awwroxifdg .gt_indent_2 {
+  text-indent: 10px;
 }
 
-#ciqnxlijoc .gt_fraction_denominator {
-  font-size: 0.6em;
-  line-height: 0.6em;
-  vertical-align: -0.05em;
+#awwroxifdg .gt_indent_3 {
+  text-indent: 15px;
+}
+
+#awwroxifdg .gt_indent_4 {
+  text-indent: 20px;
+}
+
+#awwroxifdg .gt_indent_5 {
+  text-indent: 25px;
 }
 </style>
 <table class="gt_table">
   
   <thead class="gt_col_headings">
     <tr>
-      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1">name</th>
-      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">meanPhyla</th>
-      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">sdPhyla</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="name">name</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="meanPhyla">meanPhyla</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="sdPhyla">sdPhyla</th>
     </tr>
   </thead>
   <tbody class="gt_table_body">
-    <tr><td class="gt_row gt_left">d__Bacteria; Proteobacteria</td>
-<td class="gt_row gt_right">75.0%</td>
-<td class="gt_row gt_right">17.4%</td></tr>
-    <tr><td class="gt_row gt_left">d__Bacteria; Bacteroidota</td>
-<td class="gt_row gt_right">9.6%</td>
-<td class="gt_row gt_right">9.2%</td></tr>
-    <tr><td class="gt_row gt_left">d__Bacteria; Firmicutes</td>
-<td class="gt_row gt_right">5.0%</td>
-<td class="gt_row gt_right">13.0%</td></tr>
-    <tr><td class="gt_row gt_left">d__Bacteria; Actinobacteriota</td>
-<td class="gt_row gt_right">3.4%</td>
-<td class="gt_row gt_right">2.9%</td></tr>
-    <tr><td class="gt_row gt_left">d__Bacteria; NA</td>
-<td class="gt_row gt_right">3.0%</td>
-<td class="gt_row gt_right">2.1%</td></tr>
-    <tr><td class="gt_row gt_left">Unassigned; NA</td>
-<td class="gt_row gt_right">2.3%</td>
-<td class="gt_row gt_right">1.6%</td></tr>
-    <tr><td class="gt_row gt_left">d__Bacteria; Verrucomicrobiota</td>
-<td class="gt_row gt_right">0.4%</td>
-<td class="gt_row gt_right">0.5%</td></tr>
-    <tr><td class="gt_row gt_left">d__Bacteria; Bdellovibrionota</td>
-<td class="gt_row gt_right">0.3%</td>
-<td class="gt_row gt_right">0.4%</td></tr>
-    <tr><td class="gt_row gt_left">d__Bacteria; Planctomycetota</td>
-<td class="gt_row gt_right">0.2%</td>
-<td class="gt_row gt_right">0.2%</td></tr>
-    <tr><td class="gt_row gt_left">d__Bacteria; Patescibacteria</td>
-<td class="gt_row gt_right">0.1%</td>
-<td class="gt_row gt_right">0.2%</td></tr>
-    <tr><td class="gt_row gt_left">d__Bacteria; Acidobacteriota</td>
-<td class="gt_row gt_right">0.1%</td>
-<td class="gt_row gt_right">0.1%</td></tr>
-    <tr><td class="gt_row gt_left">d__Bacteria; Myxococcota</td>
-<td class="gt_row gt_right">0.1%</td>
-<td class="gt_row gt_right">0.1%</td></tr>
+    <tr><td headers="name" class="gt_row gt_left">d__Bacteria; Proteobacteria</td>
+<td headers="meanPhyla" class="gt_row gt_right">75.0%</td>
+<td headers="sdPhyla" class="gt_row gt_right">17.4%</td></tr>
+    <tr><td headers="name" class="gt_row gt_left">d__Bacteria; Bacteroidota</td>
+<td headers="meanPhyla" class="gt_row gt_right">9.6%</td>
+<td headers="sdPhyla" class="gt_row gt_right">9.2%</td></tr>
+    <tr><td headers="name" class="gt_row gt_left">d__Bacteria; Firmicutes</td>
+<td headers="meanPhyla" class="gt_row gt_right">5.0%</td>
+<td headers="sdPhyla" class="gt_row gt_right">13.0%</td></tr>
+    <tr><td headers="name" class="gt_row gt_left">d__Bacteria; Actinobacteriota</td>
+<td headers="meanPhyla" class="gt_row gt_right">3.4%</td>
+<td headers="sdPhyla" class="gt_row gt_right">2.9%</td></tr>
+    <tr><td headers="name" class="gt_row gt_left">d__Bacteria; NA</td>
+<td headers="meanPhyla" class="gt_row gt_right">3.0%</td>
+<td headers="sdPhyla" class="gt_row gt_right">2.1%</td></tr>
+    <tr><td headers="name" class="gt_row gt_left">Unassigned; NA</td>
+<td headers="meanPhyla" class="gt_row gt_right">2.3%</td>
+<td headers="sdPhyla" class="gt_row gt_right">1.6%</td></tr>
+    <tr><td headers="name" class="gt_row gt_left">d__Bacteria; Verrucomicrobiota</td>
+<td headers="meanPhyla" class="gt_row gt_right">0.4%</td>
+<td headers="sdPhyla" class="gt_row gt_right">0.5%</td></tr>
+    <tr><td headers="name" class="gt_row gt_left">d__Bacteria; Bdellovibrionota</td>
+<td headers="meanPhyla" class="gt_row gt_right">0.3%</td>
+<td headers="sdPhyla" class="gt_row gt_right">0.4%</td></tr>
+    <tr><td headers="name" class="gt_row gt_left">d__Bacteria; Planctomycetota</td>
+<td headers="meanPhyla" class="gt_row gt_right">0.2%</td>
+<td headers="sdPhyla" class="gt_row gt_right">0.2%</td></tr>
+    <tr><td headers="name" class="gt_row gt_left">d__Bacteria; Patescibacteria</td>
+<td headers="meanPhyla" class="gt_row gt_right">0.1%</td>
+<td headers="sdPhyla" class="gt_row gt_right">0.2%</td></tr>
+    <tr><td headers="name" class="gt_row gt_left">d__Bacteria; Acidobacteriota</td>
+<td headers="meanPhyla" class="gt_row gt_right">0.1%</td>
+<td headers="sdPhyla" class="gt_row gt_right">0.1%</td></tr>
+    <tr><td headers="name" class="gt_row gt_left">d__Bacteria; Myxococcota</td>
+<td headers="meanPhyla" class="gt_row gt_right">0.1%</td>
+<td headers="sdPhyla" class="gt_row gt_right">0.1%</td></tr>
   </tbody>
   
   
@@ -1089,16 +1216,16 @@ datafullphylum %>% filter(Project=="Loperamide")  %>% group_by(name) %>%
 ## # A tibble: 38 × 3
 ##    name                          sumPhyla meanPhyla
 ##    <chr>                            <dbl>     <dbl>
-##  1 d__Bacteria; Acidobacteriota      2862     65.0 
-##  2 d__Bacteria; Actinobacteriota    64839   1441.  
-##  3 d__Bacteria; Aquificota              2      2   
-##  4 d__Bacteria; Armatimonadota         37      4.11
-##  5 d__Bacteria; Bacteroidota       209990   4666.  
-##  6 d__Bacteria; Bdellovibrionota     6484    154.  
-##  7 d__Bacteria; Campilobacterota      249      8.59
-##  8 d__Bacteria; Chloroflexi           675     17.8 
-##  9 d__Bacteria; Cloacimonadota          8      8   
-## 10 d__Bacteria; Deferribacterota       13      4.33
+##  1 Unassigned; NA                   42316    940.  
+##  2 d__Bacteria; Acidobacteriota      2862     65.0 
+##  3 d__Bacteria; Actinobacteriota    64839   1441.  
+##  4 d__Bacteria; Aquificota              2      2   
+##  5 d__Bacteria; Armatimonadota         37      4.11
+##  6 d__Bacteria; Bacteroidota       209990   4666.  
+##  7 d__Bacteria; Bdellovibrionota     6484    154.  
+##  8 d__Bacteria; Campilobacterota      249      8.59
+##  9 d__Bacteria; Chloroflexi           675     17.8 
+## 10 d__Bacteria; Cloacimonadota          8      8   
 ## # … with 28 more rows
 ```
 
@@ -1171,9 +1298,9 @@ mG = make_comb_mat(read_setsG)
       pt_size = unit(.5, "cm"),lwd=2.5,
       comb_col = c("black","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50",
                    "grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50",
-                   "grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","maroon",
+                   "grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50",
                    "grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50","grey50",
-                   "maroon","grey50","grey50",
+                   "grey50","grey50","grey50",
                    '#5a89b8',  '#1c5580', '#00264c', '#69fcc6','#0fc08e', '#008759'),
       right_annotation = rowAnnotation(" " = anno_barplot(set_size(mG), bar_width=0.7,
                                                          axis_param = list(side = "top",labels_rot = 0),
@@ -1208,7 +1335,7 @@ ggsave("../figures/FigureS4_LoperamideBarsGenusUpset.tiff", width=12.5, height=1
 
 # Limma Differential Abundance
 
-At genus level - calculate differentiall abundant taxa.
+At genus level - calculate differentially abundant taxa.
 
 
 ```r
@@ -1295,15 +1422,16 @@ limmagenus
 
 -----
 
-# Alpha Diversity - Simpsons
+# Alpha Diversity
 
 See ZebrafishMixCFUs_loperamide.Rmd script to generate figure 6 with mix diversity.  
 
+## Simpsons
 
 
 ```r
 # calculate diversity
-diversitysimpsons<-diversity(matrixLoperamide, index="simpson")
+diversitysimpsons<-diversity(matrixLoperamidePercent, index="simpson")
 # add into metadata variable
 metadataLoperamide$Simpsons<-diversitysimpsons
 
@@ -1312,8 +1440,18 @@ statsSimpsons <- compare_means(data=metadataLoperamide,
                             Simpsons~Loperamide, 
                             group.by = c("TimepointDay")) %>% 
    filter(p.format<0.05 & group1=="DMSO")
+statsSimpsons
+```
 
-convalpha <- metadataLoperamide %>% filter(Project=="Loperamide") %>% 
+```
+## # A tibble: 1 × 9
+##   TimepointDay .y.      group1 group2          p p.adj p.format p.signif method 
+##   <fct>        <chr>    <chr>  <chr>       <dbl> <dbl> <chr>    <chr>    <chr>  
+## 1 T0           Simpsons DMSO   Loperamide 0.0317  0.16 0.0317   *        Wilcox…
+```
+
+```r
+convsimpson <- metadataLoperamide %>% filter(Project=="Loperamide") %>% 
    mutate(Loperamide=factor(Loperamide, levels=c("Control water", "DMSO", "Loperamide"),
                             labels=c("Control", "DMSO", "Loperamide"))) %>% 
    ggplot(aes(x=TimepointDay, y=Simpsons, 
@@ -1327,18 +1465,119 @@ convalpha <- metadataLoperamide %>% filter(Project=="Loperamide") %>%
    scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
    scale_y_continuous(limits=c(0,1.0), expand=c(0,0))+
    theme(legend.position = "none")+
-   labs(x=NULL, y="Simpson's Index of Diversity",fill=NULL, shape=NULL, color=NULL,
+   labs(x=NULL, y="Simpson's Index",fill=NULL, shape=NULL, color=NULL,
         title="Conventional fish")+
    theme(legend.position = "bottom", plot.title = element_text(size=20),
          panel.background = element_rect(color="grey80", size=0.8))+
    guides(color=guide_legend(override.aes = list(size=4)))
 
-convalpha
+convsimpson
 ```
 
 ![](Loperamide16Samplicon_analysis_files/figure-html/alphasimpshan-1.png)<!-- -->
 
+## Richness
 
+
+```r
+# calculate richness
+Sconv <- specnumber(matrixLoperamidePercent)
+# add into metadata dataframe
+metadataLoperamide$richness <- Sconv
+
+# calculate stats
+statsRichness <- compare_means(data=metadataLoperamide, 
+                            richness~Loperamide, 
+                            group.by = c("TimepointDay")) %>% 
+   filter(p.format<0.05 & group1=="DMSO")
+statsRichness
+```
+
+```
+## # A tibble: 0 × 9
+## # … with 9 variables: TimepointDay <fct>, .y. <chr>, group1 <chr>,
+## #   group2 <chr>, p <dbl>, p.adj <dbl>, p.format <chr>, p.signif <chr>,
+## #   method <chr>
+```
+
+```r
+# plot
+convrichness <- metadataLoperamide %>% filter(Project=="Loperamide") %>% 
+   mutate(Loperamide=factor(Loperamide, levels=c("Control water", "DMSO", "Loperamide"),
+                            labels=c("Control", "DMSO", "Loperamide"))) %>% 
+   ggplot(aes(x=TimepointDay, y=richness, 
+             fill=Loperamide, color=Loperamide, shape=Loperamide))+
+   geom_boxplot(color="black", alpha=0.8, show.legend = FALSE)+
+   geom_point(size=2, position=position_jitterdodge(jitter.width=0.25)) +
+   geom_text(data=statsRichness, aes(label="*", x=TimepointDay, 
+                                        y=0.9, fill=NA, shape=NA), 
+             size=9, color="#0fc08e", show.legend=FALSE, nudge_x=.3)+
+   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_y_continuous(limits=c(0,max(Sconv)+100), expand=c(0,0))+
+   theme(legend.position = "none")+
+   labs(x=NULL, y="Observed richness",fill=NULL, shape=NULL, color=NULL,
+        title="Conventional fish")+
+   theme(legend.position = "bottom", plot.title = element_text(size=20),
+         panel.background = element_rect(color="grey80", size=0.8))+
+   guides(color=guide_legend(override.aes = list(size=4)))
+
+convrichness
+```
+
+![](Loperamide16Samplicon_analysis_files/figure-html/alpharichness-1.png)<!-- -->
+
+## Evenness
+
+
+```r
+# calculate evenness
+Jconv <- microbiome::evenness(t(matrixLoperamidePercent))
+
+# add into metadata dataframe
+metadataLoperamide <- Jconv %>% rownames_to_column("SampleID") %>% 
+   left_join(metadataLoperamide)
+
+# stats
+statsEvenness <- compare_means(data=metadataLoperamide, 
+                            pielou~Loperamide, 
+                            group.by = c("TimepointDay")) %>% 
+   filter(p.format<0.05 & group1=="DMSO")
+statsEvenness
+```
+
+```
+## # A tibble: 1 × 9
+##   TimepointDay .y.    group1 group2          p p.adj p.format p.signif method  
+##   <fct>        <chr>  <chr>  <chr>       <dbl> <dbl> <chr>    <chr>    <chr>   
+## 1 T0           pielou DMSO   Loperamide 0.0159  0.11 0.0159   *        Wilcoxon
+```
+
+```r
+conveven <- metadataLoperamide %>% filter(Project=="Loperamide") %>% 
+   mutate(Loperamide=factor(Loperamide, levels=c("Control water", "DMSO", "Loperamide"),
+                            labels=c("Control", "DMSO", "Loperamide"))) %>% 
+   ggplot(aes(x=TimepointDay, y=pielou, 
+             fill=Loperamide, color=Loperamide, shape=Loperamide))+
+   geom_boxplot(color="black", alpha=0.8, show.legend = FALSE)+
+   geom_point(size=2, position=position_jitterdodge(jitter.width=0.25)) +
+   scale_color_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_fill_manual(values=c('#000000', '#1c5580', '#0fc08e'))+
+   scale_y_continuous(limits=c(0,1), expand=c(0,0))+
+   geom_text(data=statsEvenness, aes(label="*", x=TimepointDay, 
+                                        y=0.9, fill=NA, shape=NA), 
+             size=9, color="#0fc08e", show.legend=FALSE, nudge_x=.3)+
+   theme(legend.position = "none")+
+   labs(x=NULL, y="Pielou's evenness",fill=NULL, shape=NULL, color=NULL,
+        title="Conventional fish")+
+   theme(legend.position = "bottom", plot.title = element_text(size=20),
+         panel.background = element_rect(color="grey80", size=0.8))+
+   guides(color=guide_legend(override.aes = list(size=4)))
+
+conveven
+```
+
+![](Loperamide16Samplicon_analysis_files/figure-html/alphaeven-1.png)<!-- -->
 
 # Beta Diversity
 
@@ -1472,19 +1711,19 @@ compare_means(data=braycurtisdistances, value~LoperamideTimepoint, method="wilco
 
 ```
 ## # A tibble: 36 × 8
-##    .y.   group1          group2                p  p.adj p.format p.signif method
-##    <chr> <chr>           <chr>             <dbl>  <dbl> <chr>    <chr>    <chr> 
-##  1 value ControlWater.T0 ControlWater.T1 2.54e-3 4.6e-3 0.00254  **       Wilco…
-##  2 value ControlWater.T0 ControlWater.T5 1.57e-5 4.3e-5 1.6e-05  ****     Wilco…
-##  3 value ControlWater.T0 DMSO.T0         7.56e-1 8.5e-1 0.75552  ns       Wilco…
-##  4 value ControlWater.T0 DMSO.T1         2.85e-1 3.5e-1 0.28485  ns       Wilco…
-##  5 value ControlWater.T0 DMSO.T5         8.39e-1 8.9e-1 0.83908  ns       Wilco…
-##  6 value ControlWater.T0 Loperamide.T0   5.56e-4 1.1e-3 0.00056  ***      Wilco…
-##  7 value ControlWater.T0 Loperamide.T1   1.32e-2 2.1e-2 0.01323  *        Wilco…
-##  8 value ControlWater.T0 Loperamide.T5   4.57e-1 5.3e-1 0.45653  ns       Wilco…
-##  9 value ControlWater.T1 ControlWater.T5 3.70e-4 7.8e-4 0.00037  ***      Wilco…
-## 10 value ControlWater.T1 DMSO.T0         5.76e-6 1.9e-5 5.8e-06  ****     Wilco…
-## # … with 26 more rows
+##    .y.   group1          group2                  p  p.adj p.for…¹ p.sig…² method
+##    <chr> <chr>           <chr>               <dbl>  <dbl> <chr>   <chr>   <chr> 
+##  1 value ControlWater.T0 ControlWater.T1   2.54e-3 4.6e-3 0.00254 **      Wilco…
+##  2 value ControlWater.T0 ControlWater.T5   1.57e-5 4.3e-5 1.6e-05 ****    Wilco…
+##  3 value ControlWater.T0 DMSO.T0           7.56e-1 8.5e-1 0.75552 ns      Wilco…
+##  4 value ControlWater.T0 DMSO.T1           2.85e-1 3.5e-1 0.28485 ns      Wilco…
+##  5 value ControlWater.T0 DMSO.T5           8.39e-1 8.9e-1 0.83908 ns      Wilco…
+##  6 value ControlWater.T0 Loperamide.T0     5.56e-4 1.1e-3 0.00056 ***     Wilco…
+##  7 value ControlWater.T0 Loperamide.T1     1.32e-2 2.1e-2 0.01323 *       Wilco…
+##  8 value ControlWater.T0 Loperamide.T5     4.57e-1 5.3e-1 0.45653 ns      Wilco…
+##  9 value ControlWater.T1 ControlWater.T5   3.70e-4 7.8e-4 0.00037 ***     Wilco…
+## 10 value ControlWater.T1 DMSO.T0           5.76e-6 1.9e-5 5.8e-06 ****    Wilco…
+## # … with 26 more rows, and abbreviated variable names ¹​p.format, ²​p.signif
 ```
 
 ```r
@@ -1517,7 +1756,8 @@ braycurtisdistancessub <-
   # calculate the dissimilarity matrix between each sample
   vegdist(SVsLoperamidesub, method="bray", k=2) %>% as.matrix() %>% as.data.frame() %>% 
   # Add in the sites based on the rows (paired sample)
-  rownames_to_column(var="PairedID")  %>% mutate(PairedCondition=metadataLoperamidesub$LoperamideTimepoint) %>% 
+  rownames_to_column(var="PairedID")  %>% 
+  mutate(PairedCondition=metadataLoperamidesub$LoperamideTimepoint) %>% 
   # Make into longform based on the columns (OG SampleID)
   pivot_longer(cols="6-DMSO-1-1":"45-LOP-3-5", names_to="SampleID") %>% 
   # Add in sites based on the columns (OG SampleID)
@@ -1607,100 +1847,98 @@ sessionInfo()
 ## [8] base     
 ## 
 ## other attached packages:
-##  [1] ComplexHeatmap_2.10.0  gplots_3.1.1           UpSetR_1.4.0          
-##  [4] ggtext_0.1.1           ggh4x_0.2.1            patchwork_1.1.1       
-##  [7] microbiomeMarker_1.3.2 gt_0.4.0               vegan_2.5-7           
-## [10] lattice_0.20-45        permute_0.9-7          qiime2R_0.99.6        
-## [13] ggpubr_0.4.0           scales_1.1.1           forcats_0.5.1         
-## [16] stringr_1.4.0          dplyr_1.0.8            purrr_0.3.4           
-## [19] readr_2.1.2            tidyr_1.2.0            tibble_3.1.6          
-## [22] ggplot2_3.3.5          tidyverse_1.3.1       
+##  [1] ComplexHeatmap_2.10.0  gplots_3.1.3           UpSetR_1.4.0          
+##  [4] cowplot_1.1.1          ggtext_0.1.2           ggh4x_0.2.3.9000      
+##  [7] patchwork_1.1.2        microbiomeMarker_1.3.2 gt_0.8.0              
+## [10] vegan_2.6-4            lattice_0.20-45        permute_0.9-7         
+## [13] qiime2R_0.99.6         ggpubr_0.6.0           scales_1.2.1          
+## [16] lubridate_1.9.2        forcats_1.0.0          stringr_1.5.0         
+## [19] dplyr_1.1.0            purrr_1.0.1            readr_2.1.4           
+## [22] tidyr_1.3.0            tibble_3.1.8           ggplot2_3.4.1         
+## [25] tidyverse_2.0.0       
 ## 
 ## loaded via a namespace (and not attached):
-##   [1] utf8_1.2.2                  tidyselect_1.1.2           
-##   [3] RSQLite_2.2.11              AnnotationDbi_1.56.2       
-##   [5] htmlwidgets_1.5.4           BiocParallel_1.28.3        
-##   [7] Rtsne_0.15                  munsell_0.5.0              
-##   [9] codetools_0.2-18            DT_0.22                    
-##  [11] withr_2.5.0                 colorspace_2.0-3           
-##  [13] Biobase_2.54.0              phyloseq_1.38.0            
-##  [15] highr_0.9                   knitr_1.38                 
-##  [17] rstudioapi_0.13             stats4_4.1.3               
-##  [19] ggsignif_0.6.3              labeling_0.4.2             
-##  [21] MatrixGenerics_1.6.0        Rdpack_2.3                 
-##  [23] GenomeInfoDbData_1.2.7      plotROC_2.2.1              
-##  [25] farver_2.1.0                bit64_4.0.5                
-##  [27] rhdf5_2.38.1                treeio_1.18.1              
-##  [29] vctrs_0.4.0                 generics_0.1.2             
-##  [31] xfun_0.30                   markdown_1.1               
-##  [33] R6_2.5.1                    doParallel_1.0.17          
-##  [35] GenomeInfoDb_1.30.1         clue_0.3-60                
-##  [37] locfit_1.5-9.5              bitops_1.0-7               
-##  [39] rhdf5filters_1.6.0          microbiome_1.16.0          
-##  [41] cachem_1.0.6                gridGraphics_0.5-1         
-##  [43] DelayedArray_0.20.0         assertthat_0.2.1           
-##  [45] nnet_7.3-17                 gtable_0.3.0               
-##  [47] rlang_1.0.2                 genefilter_1.76.0          
-##  [49] GlobalOptions_0.1.2         splines_4.1.3              
-##  [51] rstatix_0.7.0               lazyeval_0.2.2             
-##  [53] broom_0.7.12                checkmate_2.0.0            
-##  [55] yaml_2.3.5                  reshape2_1.4.4             
-##  [57] abind_1.4-5                 modelr_0.1.8               
-##  [59] backports_1.4.1             Hmisc_4.6-0                
-##  [61] gridtext_0.1.4              tools_4.1.3                
-##  [63] zCompositions_1.4.0-1       ggplotify_0.1.0            
-##  [65] ellipsis_0.3.2              jquerylib_0.1.4            
-##  [67] biomformat_1.22.0           RColorBrewer_1.1-2         
-##  [69] BiocGenerics_0.40.0         Rcpp_1.0.8.3               
-##  [71] plyr_1.8.7                  base64enc_0.1-3            
-##  [73] zlibbioc_1.40.0             RCurl_1.98-1.6             
-##  [75] Wrench_1.12.0               rpart_4.1.16               
-##  [77] GetoptLong_1.0.5            S4Vectors_0.32.4           
-##  [79] SummarizedExperiment_1.24.0 haven_2.4.3                
-##  [81] cluster_2.1.3               fs_1.5.2                   
-##  [83] magrittr_2.0.3              data.table_1.14.2          
-##  [85] circlize_0.4.14             reprex_2.0.1               
-##  [87] truncnorm_1.0-8             matrixStats_0.61.0         
-##  [89] hms_1.1.1                   evaluate_0.15              
-##  [91] xtable_1.8-4                XML_3.99-0.9               
-##  [93] jpeg_0.1-9                  readxl_1.4.0               
+##   [1] utf8_1.2.3                  tidyselect_1.2.0           
+##   [3] RSQLite_2.3.0               AnnotationDbi_1.56.2       
+##   [5] htmlwidgets_1.6.1           BiocParallel_1.28.3        
+##   [7] Rtsne_0.16                  munsell_0.5.0              
+##   [9] ragg_1.2.5                  codetools_0.2-19           
+##  [11] interp_1.1-3                DT_0.27                    
+##  [13] withr_2.5.0                 colorspace_2.1-0           
+##  [15] Biobase_2.54.0              phyloseq_1.38.0            
+##  [17] highr_0.10                  knitr_1.42                 
+##  [19] rstudioapi_0.14             stats4_4.1.3               
+##  [21] ggsignif_0.6.4              labeling_0.4.2             
+##  [23] MatrixGenerics_1.6.0        Rdpack_2.4                 
+##  [25] GenomeInfoDbData_1.2.7      plotROC_2.3.0              
+##  [27] farver_2.1.1                bit64_4.0.5                
+##  [29] rhdf5_2.38.1                vctrs_0.5.2                
+##  [31] treeio_1.18.1               generics_0.1.3             
+##  [33] xfun_0.37                   timechange_0.2.0           
+##  [35] markdown_1.5                R6_2.5.1                   
+##  [37] doParallel_1.0.17           GenomeInfoDb_1.30.1        
+##  [39] clue_0.3-64                 locfit_1.5-9.7             
+##  [41] bitops_1.0-7                rhdf5filters_1.6.0         
+##  [43] microbiome_1.16.0           cachem_1.0.6               
+##  [45] gridGraphics_0.5-1          DelayedArray_0.20.0        
+##  [47] nnet_7.3-18                 gtable_0.3.1               
+##  [49] rlang_1.0.6                 genefilter_1.76.0          
+##  [51] systemfonts_1.0.4           GlobalOptions_0.1.2        
+##  [53] splines_4.1.3               rstatix_0.7.2              
+##  [55] lazyeval_0.2.2              broom_1.0.3                
+##  [57] checkmate_2.1.0             yaml_2.3.7                 
+##  [59] reshape2_1.4.4              abind_1.4-5                
+##  [61] backports_1.4.1             Hmisc_4.8-0                
+##  [63] gridtext_0.1.5              tools_4.1.3                
+##  [65] zCompositions_1.4.0-1       ggplotify_0.1.0            
+##  [67] ellipsis_0.3.2              jquerylib_0.1.4            
+##  [69] biomformat_1.22.0           RColorBrewer_1.1-3         
+##  [71] BiocGenerics_0.40.0         Rcpp_1.0.10                
+##  [73] plyr_1.8.8                  base64enc_0.1-3            
+##  [75] zlibbioc_1.40.0             RCurl_1.98-1.10            
+##  [77] Wrench_1.12.0               rpart_4.1.19               
+##  [79] deldir_1.0-6                GetoptLong_1.0.5           
+##  [81] S4Vectors_0.32.4            SummarizedExperiment_1.24.0
+##  [83] cluster_2.1.4               magrittr_2.0.3             
+##  [85] magick_2.7.3                data.table_1.14.8          
+##  [87] circlize_0.4.15             truncnorm_1.0-8            
+##  [89] matrixStats_0.63.0          hms_1.1.2                  
+##  [91] evaluate_0.20               xtable_1.8-4               
+##  [93] XML_3.99-0.13               jpeg_0.1-10                
 ##  [95] IRanges_2.28.0              gridExtra_2.3              
 ##  [97] shape_1.4.6                 compiler_4.1.3             
-##  [99] KernSmooth_2.23-20          crayon_1.5.1               
-## [101] htmltools_0.5.2             ggfun_0.0.5                
-## [103] mgcv_1.8-39                 tzdb_0.3.0                 
+##  [99] KernSmooth_2.23-20          crayon_1.5.2               
+## [101] htmltools_0.5.4             ggfun_0.0.9                
+## [103] mgcv_1.8-41                 tzdb_0.3.0                 
 ## [105] Formula_1.2-4               geneplotter_1.72.0         
-## [107] aplot_0.1.2                 ANCOMBC_1.4.0              
-## [109] lubridate_1.8.0             DBI_1.1.2                  
-## [111] dbplyr_2.1.1                MASS_7.3-56                
-## [113] Matrix_1.4-1                ade4_1.7-18                
-## [115] car_3.0-12                  cli_3.2.0                  
-## [117] rbibutils_2.2.7             parallel_4.1.3             
-## [119] igraph_1.2.11               GenomicRanges_1.46.1       
-## [121] pkgconfig_2.0.3             foreign_0.8-82             
-## [123] xml2_1.3.3                  foreach_1.5.2              
-## [125] ggtree_3.2.1                annotate_1.72.0            
-## [127] bslib_0.3.1                 multtest_2.50.0            
-## [129] XVector_0.34.0              rvest_1.0.2                
-## [131] NADA_1.6-1.1                yulab.utils_0.0.4          
-## [133] digest_0.6.29               Biostrings_2.62.0          
-## [135] rmarkdown_2.13              cellranger_1.1.0           
-## [137] tidytree_0.3.9              htmlTable_2.4.0            
-## [139] gtools_3.9.2                rjson_0.2.21               
-## [141] nloptr_2.0.0                lifecycle_1.0.1            
-## [143] nlme_3.1-157                jsonlite_1.8.0             
-## [145] Rhdf5lib_1.16.0             carData_3.0-5              
-## [147] limma_3.50.1                fansi_1.0.3                
-## [149] pillar_1.7.0                KEGGREST_1.34.0            
-## [151] fastmap_1.1.0               httr_1.4.2                 
-## [153] survival_3.3-1              glue_1.6.2                 
-## [155] png_0.1-7                   iterators_1.0.14           
-## [157] glmnet_4.1-3                bit_4.0.4                  
-## [159] metagenomeSeq_1.36.0        stringi_1.7.6              
-## [161] sass_0.4.1                  blob_1.2.2                 
-## [163] DESeq2_1.34.0               caTools_1.18.2             
-## [165] latticeExtra_0.6-29         memoise_2.0.1              
-## [167] ape_5.6-2
+## [107] aplot_0.1.9                 ANCOMBC_1.4.0              
+## [109] DBI_1.1.3                   MASS_7.3-58.2              
+## [111] Matrix_1.4-1                ade4_1.7-22                
+## [113] car_3.1-1                   cli_3.6.0                  
+## [115] rbibutils_2.2.13            parallel_4.1.3             
+## [117] igraph_1.4.0                GenomicRanges_1.46.1       
+## [119] pkgconfig_2.0.3             foreign_0.8-84             
+## [121] xml2_1.3.3                  foreach_1.5.2              
+## [123] ggtree_3.2.1                annotate_1.72.0            
+## [125] bslib_0.4.2                 multtest_2.50.0            
+## [127] XVector_0.34.0              NADA_1.6-1.1               
+## [129] yulab.utils_0.0.6           digest_0.6.31              
+## [131] Biostrings_2.62.0           rmarkdown_2.20             
+## [133] tidytree_0.4.2              htmlTable_2.4.1            
+## [135] commonmark_1.8.1            gtools_3.9.4               
+## [137] rjson_0.2.21                nloptr_2.0.3               
+## [139] lifecycle_1.0.3             nlme_3.1-162               
+## [141] jsonlite_1.8.4              Rhdf5lib_1.16.0            
+## [143] carData_3.0-5               limma_3.50.3               
+## [145] fansi_1.0.4                 pillar_1.8.1               
+## [147] KEGGREST_1.34.0             fastmap_1.1.0              
+## [149] httr_1.4.4                  survival_3.5-3             
+## [151] glue_1.6.2                  png_0.1-8                  
+## [153] iterators_1.0.14            glmnet_4.1-6               
+## [155] bit_4.0.5                   stringi_1.7.12             
+## [157] sass_0.4.5                  metagenomeSeq_1.36.0       
+## [159] blob_1.2.3                  textshaping_0.3.6          
+## [161] DESeq2_1.34.0               caTools_1.18.2             
+## [163] latticeExtra_0.6-30         memoise_2.0.1              
+## [165] ape_5.7
 ```
-
-
